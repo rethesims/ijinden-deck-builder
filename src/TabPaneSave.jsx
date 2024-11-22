@@ -1,7 +1,4 @@
-// SPDX-License-Identifier: MIT
-
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Accordion,
   AccordionBody,
@@ -14,10 +11,11 @@ import {
   ModalHeader,
   ModalTitle,
   Spinner,
+  Form,
 } from 'react-bootstrap';
-
-import { dataCardsArrayForDeck } from './dataCards';
+import { useLiveQuery } from 'dexie-react-hooks';
 import db from './db';
+import { dataCardsArrayForDeck } from './dataCards';
 import enumTabPane from './enumTabPane';
 import ImageCard from './ImageCard';
 import { enumActionSimulator } from './reducerSimulator';
@@ -41,6 +39,8 @@ function TabPaneSave({
   dispatchSimulator,
 }) {
   const [showModalClear, setShowModalClear] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [deckCode, setDeckCode] = useState('');
   const decksSaved = useLiveQuery(async () => db.decks.orderBy(':id').reverse().toArray(), []);
 
   function handleSelectAccordion(eventKey) {
@@ -58,6 +58,7 @@ function TabPaneSave({
   async function handleClickConfirmClear() {
     try {
       await db.decks.clear();
+      alert('保存済みデッキがすべて削除されました。'); // eslint-disable-line no-alert
     } catch (error) {
       console.error('デッキ削除中にエラー:', error); // eslint-disable-line no-console
       alert('削除に失敗しました。再試行してください。'); // eslint-disable-line no-alert
@@ -94,43 +95,67 @@ function TabPaneSave({
           timestamp: deck.timestamp,
           main: deck.main,
           side: deck.side,
-        }; // ショートハンド形式に修正
+        };
         return db.decks.add(newDeck);
       });
       await Promise.all(promises);
-      // alert('データを整理し、IDを再設定しました。'); // eslint-disable-line no-alert
 
-      // 重複削除後のデータをAPIに送信
-      await sendDecksToAPI(uniqueDecks);
+      alert('データを整理し、IDを再設定しました。'); // eslint-disable-line no-alert
     } catch (error) {
       console.error('データ再登録中にエラー:', error); // eslint-disable-line no-console
       alert('データ再登録に失敗しました。'); // eslint-disable-line no-alert
     }
   }
 
-  // 重複削除後のデータを指定されたAPIエンドポイントに送信
-  async function sendDecksToAPI(decks) {
+  async function handleImportDeckByCode(importDeckCode) {
+    if (!importDeckCode) {
+      alert('デッキコードが入力されていません'); // eslint-disable-line no-alert
+      return;
+    }
+
     try {
-      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/user/decks', {
+      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/deck/read', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ decks }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: importDeckCode }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'データ送信に失敗しました');
+        throw new Error(data.message || 'デッキデータの読み込みに失敗しました');
       }
 
-      console.log('APIレスポンス:', data); // eslint-disable-line no-console
-      const userId = data.user_id; // `user_id` を `userId` に変更
-      alert(`デッキ保存コード: ${userId}`); // eslint-disable-line no-alert
+      const deckData = data;
+
+      // デッキデータの登録
+      const timestamp = new Date(deckData.timestamp || Date.now());
+      const objectMain = deckData.main || [];
+      const objectSide = deckData.side || [];
+      const maxId = await db.decks.toCollection().keys()
+        .then((keys) => (keys.length > 0 ? Math.max(...keys) : 0));
+      const currentId = maxId + 1;
+
+      const objectDeck = {
+        id: currentId,
+        key: currentId,
+        code: deckData.code,
+        timestamp,
+        main: objectMain,
+        side: objectSide,
+      };
+
+      await db.decks.put(objectDeck);
+
+      // デッキを設定
+      handleSetDeckMain(new Map(objectMain));
+      handleSetDeckSide(new Map(objectSide));
+
+      alert(`デッキが正常に読み込まれました (コード: ${deckData.code})`); // eslint-disable-line no-alert
+      setShowImportModal(false);
     } catch (error) {
-      console.error('データ送信中にエラーが発生しました:', error); // eslint-disable-line no-console
-      alert(`データ送信に失敗しました: ${error.message}`); // eslint-disable-line no-alert
+      console.error('デッキ読み込み中にエラー:', error); // eslint-disable-line no-console
+      alert(`デッキ読み込みに失敗しました: ${error.message}`); // eslint-disable-line no-alert
     }
   }
 
@@ -171,15 +196,42 @@ function TabPaneSave({
           );
         })}
       </Accordion>
-      <h2 className="m-2">クリア</h2>
+      <h2 className="m-2">操作</h2>
       <div className="m-2">
-        <Button variant="outline-danger" onClick={handleClickClear}>
+        <Button variant="outline-primary" onClick={() => setShowImportModal(true)}>
+          デッキコードでインポート
+        </Button>
+        <Button variant="outline-danger" onClick={handleClickClear} className="ms-2">
           保存済みレシピをすべて削除
         </Button>
         <Button variant="outline-primary" onClick={handleDeduplicateAndResetIds} className="ms-2">
           重複を削除しIDを再設定
         </Button>
       </div>
+      <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
+        <ModalHeader closeButton>
+          <ModalTitle>デッキインポート</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <Form.Group>
+            <Form.Label>デッキコードを入力してください:</Form.Label>
+            <Form.Control
+              type="text"
+              value={deckCode}
+              onChange={(e) => setDeckCode(e.target.value)}
+              placeholder="デッキコード"
+            />
+          </Form.Group>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowImportModal(false)}>
+            キャンセル
+          </Button>
+          <Button variant="primary" onClick={() => handleImportDeckByCode(deckCode)}>
+            インポート
+          </Button>
+        </ModalFooter>
+      </Modal>
       <Modal show={showModalClear} onHide={handleClickCancelClear}>
         <ModalHeader closeButton>
           <ModalTitle>マイデッキ</ModalTitle>
@@ -215,6 +267,7 @@ function ContainerDeckSaved({
   async function handleClickDelete() {
     try {
       await db.decks.delete(aDeckSaved.id);
+      alert('デッキが削除されました。'); // eslint-disable-line no-alert
     } catch (error) {
       console.error('デッキ削除中にエラー:', error); // eslint-disable-line no-console
       alert('削除に失敗しました。再試行してください。'); // eslint-disable-line no-alert

@@ -39,16 +39,34 @@ function TabPaneDeck({
       return;
     }
 
-    // 現在のデッキをオブジェクト化する
     const timestamp = new Date();
     const objectMain = [...deckMain.entries()];
     const objectSide = [...deckSide.entries()];
     const objectDeck = { timestamp, main: objectMain, side: objectSide };
-    // IndexedDB に保存する
-    const idDeck = await db.decks.add(objectDeck);
-    // マイデッキペインに移動する
-    handleSetActiveDeckSaved(idDeck);
-    handleSetActiveTab(enumTabPane.SAVE_AND_LOAD);
+
+    try {
+      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v1/deck/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deckData: objectDeck }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'デッキの送信に失敗しました');
+      }
+
+      objectDeck.code = data.code;
+
+      const idDeck = await db.decks.add(objectDeck);
+
+      handleSetActiveDeckSaved(idDeck);
+      handleSetActiveTab(enumTabPane.SAVE_AND_LOAD);
+    } catch (error) {
+      console.error('デッキ送信中にエラーが発生しました:', error);
+      alert(`デッキ送信に失敗しました: ${error.message}`);
+    }
   }
 
   function handleClickClear() {
@@ -86,11 +104,12 @@ function TabPaneDeck({
       <h3 className="m-2">{titleMain}</h3>
       <div className="container-card-line-up ms-2">
         {
-          /* eslint-disable react/jsx-props-no-spreading */
           dataCardsArray.map((element) => (
             <ContainerDeckCard
-              {...element}
+              id={element.id}
               key={element.id}
+              name={element.name}
+              imageUrl={element.imageUrl}
               deckThis={deckMain}
               handleSetDeckThis={handleSetDeckMain}
               deckThat={deckSide}
@@ -99,17 +118,17 @@ function TabPaneDeck({
               dispatchSimulator={dispatchSimulator}
             />
           ))
-          /* eslint-enable react/jsx-props-no-spreading */
         }
       </div>
       <h3 className="m-2">{titleSide}</h3>
       <div className="container-card-line-up ms-2">
         {
-          /* eslint-disable react/jsx-props-no-spreading */
           dataCardsArray.map((element) => (
             <ContainerDeckCard
-              {...element}
+              id={element.id}
               key={element.id}
+              name={element.name}
+              imageUrl={element.imageUrl}
               deckThis={deckSide}
               handleSetDeckThis={handleSetDeckSide}
               deckThat={deckMain}
@@ -119,7 +138,6 @@ function TabPaneDeck({
               isSide
             />
           ))
-          /* eslint-enable react/jsx-props-no-spreading */
         }
       </div>
       {

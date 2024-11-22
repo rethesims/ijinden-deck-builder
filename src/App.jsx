@@ -88,7 +88,7 @@ function App() {
 
   return (
     <>
-      <h1 className="m-2">イジンデン デッキ作成</h1>
+      <h1 className="m-2">イジンデン デッキ作成_デッキ共有版</h1>
       <Tabs
         activeKey={activeTab}
         defaultActiveKey={enumTabPane.CARD}

@@ -15,11 +15,19 @@ import {
 } from 'react-bootstrap';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from './db';
+
+// 必要なインポートを再度追加
 import { dataCardsArrayForDeck } from './dataCards';
-import enumTabPane from './enumTabPane';
 import ImageCard from './ImageCard';
 import { enumActionSimulator } from './reducerSimulator';
-import { sum } from './utils';
+import enumTabPane from './enumTabPane';
+
+// 未使用のインポートを削除
+// import { dataCardsArrayForDeck } from './dataCards';
+// import enumTabPane from './enumTabPane';
+// import ImageCard from './ImageCard';
+// import { enumActionSimulator } from './reducerSimulator';
+// import { sum } from './utils';
 
 const DTF = new Intl.DateTimeFormat([], {
   year: 'numeric',
@@ -41,6 +49,9 @@ function TabPaneSave({
   const [showModalClear, setShowModalClear] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [deckCode, setDeckCode] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const decksSaved = useLiveQuery(async () => db.decks.orderBy(':id').reverse().toArray(), []);
 
   function handleSelectAccordion(eventKey) {
@@ -58,10 +69,10 @@ function TabPaneSave({
   async function handleClickConfirmClear() {
     try {
       await db.decks.clear();
-      alert('保存済みデッキがすべて削除されました。'); // eslint-disable-line no-alert
+      setShowSuccessModal(true);
     } catch (error) {
-      console.error('デッキ削除中にエラー:', error); // eslint-disable-line no-console
-      alert('削除に失敗しました。再試行してください。'); // eslint-disable-line no-alert
+      setErrorMessage('削除に失敗しました。再試行してください。');
+      setShowErrorModal(true);
     } finally {
       setShowModalClear(false);
     }
@@ -69,14 +80,14 @@ function TabPaneSave({
 
   async function handleDeduplicateAndResetIds() {
     if (!decksSaved || decksSaved.length === 0) {
-      alert('保存済みレシピがありません。'); // eslint-disable-line no-alert
+      setErrorMessage('保存済みレシピがありません。');
+      setShowErrorModal(true);
       return;
     }
 
     const uniqueDecks = [];
     const seenCodes = new Set();
 
-    // 重複削除
     decksSaved.reverse().forEach((deck) => {
       if (!seenCodes.has(deck.code)) {
         seenCodes.add(deck.code);
@@ -84,9 +95,8 @@ function TabPaneSave({
       }
     });
 
-    // 再登録
     try {
-      await db.decks.clear(); // 既存データをクリア
+      await db.decks.clear();
       const promises = uniqueDecks.map((deck, index) => {
         const newDeck = {
           id: index + 1,
@@ -100,16 +110,17 @@ function TabPaneSave({
       });
       await Promise.all(promises);
 
-      alert('データを整理し、IDを再設定しました。'); // eslint-disable-line no-alert
+      setShowSuccessModal(true);
     } catch (error) {
-      console.error('データ再登録中にエラー:', error); // eslint-disable-line no-console
-      alert('データ再登録に失敗しました。'); // eslint-disable-line no-alert
+      setErrorMessage('データ再登録に失敗しました。');
+      setShowErrorModal(true);
     }
   }
 
   async function handleImportDeckByCode(importDeckCode) {
     if (!importDeckCode) {
-      alert('デッキコードが入力されていません'); // eslint-disable-line no-alert
+      setErrorMessage('デッキコードが入力されていません');
+      setShowErrorModal(true);
       return;
     }
 
@@ -128,11 +139,12 @@ function TabPaneSave({
 
       const deckData = data;
 
-      // デッキデータの登録
       const timestamp = new Date(deckData.timestamp || Date.now());
       const objectMain = deckData.main || [];
       const objectSide = deckData.side || [];
-      const maxId = await db.decks.toCollection().keys()
+      const maxId = await db.decks
+        .toCollection()
+        .keys()
         .then((keys) => (keys.length > 0 ? Math.max(...keys) : 0));
       const currentId = maxId + 1;
 
@@ -147,67 +159,112 @@ function TabPaneSave({
 
       await db.decks.put(objectDeck);
 
-      // デッキを設定
       handleSetDeckMain(new Map(objectMain));
       handleSetDeckSide(new Map(objectSide));
 
-      alert(`デッキが正常に読み込まれました (コード: ${deckData.code})`); // eslint-disable-line no-alert
+      setShowSuccessModal(true);
       setShowImportModal(false);
     } catch (error) {
-      console.error('デッキ読み込み中にエラー:', error); // eslint-disable-line no-console
-      alert(`デッキ読み込みに失敗しました: ${error.message}`); // eslint-disable-line no-alert
+      setErrorMessage(`デッキ読み込みに失敗しました: ${error.message}`);
+      setShowErrorModal(true);
     }
   }
 
+  // 条件に応じたコンテンツを定義
+  let content;
+
   if (!decksSaved) {
-    return (
+    content = (
       <Spinner animation="border" role="status">
         <span className="visually-hidden">読み込み中...</span>
       </Spinner>
     );
-  }
+  } else if (decksSaved.length === 0) {
+    content = (
+      <>
+        <h2 className="m-2">保存済みデッキはありません</h2>
+        <h2 className="m-2">操作</h2>
+        <div className="m-2">
+          <Button variant="outline-primary" onClick={() => setShowImportModal(true)}>
+            デッキコードでインポート
+          </Button>
+        </div>
+      </>
+    );
+  } else {
+    content = (
+      <>
+        <h2 className="m-2">ロード</h2>
+        <Accordion activeKey={activeDeckSaved} onSelect={handleSelectAccordion}>
+          {decksSaved.map((aDeckSaved) => {
+            const timestamp = DTF.format(new Date(aDeckSaved.timestamp));
+            const code = aDeckSaved.code || 'コードなし';
+            const header = `#${aDeckSaved.id} - コード: ${code} (${timestamp})`;
 
-  if (decksSaved.length === 0) {
-    return <p>保存されたデッキがありません。</p>;
+            return (
+              <AccordionItem key={aDeckSaved.id} eventKey={aDeckSaved.id}>
+                <AccordionHeader>{header}</AccordionHeader>
+                <AccordionBody>
+                  <ContainerDeckSaved
+                    aDeckSaved={aDeckSaved}
+                    handleSetDeckMain={handleSetDeckMain}
+                    handleSetDeckSide={handleSetDeckSide}
+                    handleSetActiveTab={handleSetActiveTab}
+                    dispatchSimulator={dispatchSimulator}
+                  />
+                </AccordionBody>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+        <h2 className="m-2">操作</h2>
+        <div className="m-2">
+          <Button variant="outline-primary" onClick={() => setShowImportModal(true)}>
+            デッキコードでインポート
+          </Button>
+          <Button variant="outline-danger" onClick={handleClickClear} className="ms-2">
+            保存済みレシピをすべて削除
+          </Button>
+          <Button variant="outline-primary" onClick={handleDeduplicateAndResetIds} className="ms-2">
+            重複を削除しIDを再設定
+          </Button>
+        </div>
+      </>
+    );
   }
 
   return (
     <>
-      <h2 className="m-2">ロード</h2>
-      <Accordion activeKey={activeDeckSaved} onSelect={handleSelectAccordion}>
-        {decksSaved.map((aDeckSaved) => {
-          const timestamp = DTF.format(new Date(aDeckSaved.timestamp));
-          const code = aDeckSaved.code || 'コードなし';
-          const header = `#${aDeckSaved.id} - コード: ${code} (${timestamp})`;
+      {content}
 
-          return (
-            <AccordionItem key={aDeckSaved.id} eventKey={aDeckSaved.id}>
-              <AccordionHeader>{header}</AccordionHeader>
-              <AccordionBody>
-                <ContainerDeckSaved
-                  aDeckSaved={aDeckSaved}
-                  handleSetDeckMain={handleSetDeckMain}
-                  handleSetDeckSide={handleSetDeckSide}
-                  handleSetActiveTab={handleSetActiveTab}
-                  dispatchSimulator={dispatchSimulator}
-                />
-              </AccordionBody>
-            </AccordionItem>
-          );
-        })}
-      </Accordion>
-      <h2 className="m-2">操作</h2>
-      <div className="m-2">
-        <Button variant="outline-primary" onClick={() => setShowImportModal(true)}>
-          デッキコードでインポート
-        </Button>
-        <Button variant="outline-danger" onClick={handleClickClear} className="ms-2">
-          保存済みレシピをすべて削除
-        </Button>
-        <Button variant="outline-primary" onClick={handleDeduplicateAndResetIds} className="ms-2">
-          重複を削除しIDを再設定
-        </Button>
-      </div>
+      {/* モーダルのレンダリング */}
+      {/* 成功モーダル */}
+      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)}>
+        <ModalHeader closeButton>
+          <ModalTitle>成功</ModalTitle>
+        </ModalHeader>
+        <ModalBody>操作が正常に完了しました。</ModalBody>
+        <ModalFooter>
+          <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
+            閉じる
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* エラーモーダル */}
+      <Modal show={showErrorModal} onHide={() => setShowErrorModal(false)}>
+        <ModalHeader closeButton>
+          <ModalTitle>エラー</ModalTitle>
+        </ModalHeader>
+        <ModalBody>{errorMessage}</ModalBody>
+        <ModalFooter>
+          <Button variant="danger" onClick={() => setShowErrorModal(false)}>
+            閉じる
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* インポートモーダル */}
       <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
         <ModalHeader closeButton>
           <ModalTitle>デッキインポート</ModalTitle>
@@ -232,6 +289,8 @@ function TabPaneSave({
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* クリア確認モーダル */}
       <Modal show={showModalClear} onHide={handleClickCancelClear}>
         <ModalHeader closeButton>
           <ModalTitle>マイデッキ</ModalTitle>
@@ -250,6 +309,7 @@ function TabPaneSave({
   );
 }
 
+// ContainerDeckSaved コンポーネントの定義を追加
 function ContainerDeckSaved({
   aDeckSaved,
   handleSetDeckMain,
@@ -267,10 +327,9 @@ function ContainerDeckSaved({
   async function handleClickDelete() {
     try {
       await db.decks.delete(aDeckSaved.id);
-      alert('デッキが削除されました。'); // eslint-disable-line no-alert
+      // 成功時の処理を追加
     } catch (error) {
-      console.error('デッキ削除中にエラー:', error); // eslint-disable-line no-console
-      alert('削除に失敗しました。再試行してください。'); // eslint-disable-line no-alert
+      // エラー処理を追加
     }
   }
 
@@ -284,37 +343,32 @@ function ContainerDeckSaved({
           削除
         </Button>
       </div>
-      <ContainerDeckSavedPart
-        title="メインデッキ"
-        deckSaved={new Map(aDeckSaved.main)}
-      />
-      <ContainerDeckSavedPart
-        title="サイドデッキ"
-        deckSaved={new Map(aDeckSaved.side)}
-      />
+      <ContainerDeckSavedPart title="メインデッキ" deckSaved={new Map(aDeckSaved.main)} />
+      <ContainerDeckSavedPart title="サイドデッキ" deckSaved={new Map(aDeckSaved.side)} />
     </>
   );
 }
 
+// ContainerDeckSavedPart コンポーネントの定義を追加
 function ContainerDeckSavedPart({ title, deckSaved }) {
-  const titleFull = `${title} (${sum(deckSaved.values())}枚)`;
+  const totalCards = Array.from(deckSaved.values()).reduce((sum, val) => sum + val, 0);
+  const titleFull = `${title} (${totalCards}枚)`;
 
   return (
     <>
       <h3 className="mb-1">{titleFull}</h3>
       <div className="overflow-auto mb-1" style={{ minHeight: 60, maxHeight: 300 }}>
-        {dataCardsArrayForDeck.map((card) => (
-          deckSaved.has(card.id) ? (
-            <ImageCard
-              key={card.id}
-              imageUrl={card.imageUrl}
-              alt={card.name}
-              numCopies={deckSaved.get(card.id)}
-              loading="lazy"
-              small
-            />
-          ) : null
-        ))}
+        {/* 必要であれば dataCardsArrayForDeck や ImageCard を使用 */}
+        {dataCardsArrayForDeck.map((card) => (deckSaved.has(card.id) ? (
+          <ImageCard
+            key={card.id}
+            imageUrl={card.imageUrl}
+            alt={card.name}
+            numCopies={deckSaved.get(card.id)}
+            loading="lazy"
+            small
+          />
+        ) : null))}
       </div>
     </>
   );

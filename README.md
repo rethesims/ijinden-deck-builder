@@ -2,11 +2,14 @@
 
 ## これは何？
 
-イジンデンのデッキレシピを作成するアプリです。
+すいーとポテト様の作成したイジンデンのデッキレシピを作成するアプリの改造版です。
+作成中です
+
 
 GitHub Pages でアプリを公開しています。公開ページは次の URL です。
 
 https://sweetpotato.github.io/ijinden-deck-builder/
+
 
 ## 特徴
 
@@ -25,4 +28,3 @@ https://sweetpotato.github.io/ijinden-deck-builder/
 
 ## 連絡先
 
-すいーとポテト &lt;sweetpotato DOT quarter PLUS github AT gmail DOT com&gt;

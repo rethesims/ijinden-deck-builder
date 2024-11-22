@@ -5,6 +5,8 @@ import Dexie from 'dexie';
 const DATABASE_NAME = 'ijinden-deck-builder';
 
 const db = new Dexie(DATABASE_NAME);
-db.version(1).stores({ decks: '++id' });
+
+// 手動で `id` を管理
+db.version(1).stores({ decks: 'id, key, timestamp, code, main, side' });
 
 export default db;

@@ -42,10 +42,24 @@ function TabPaneDeck({
     const timestamp = new Date();
     const objectMain = [...deckMain.entries()];
     const objectSide = [...deckSide.entries()];
-    const objectDeck = { timestamp, main: objectMain, side: objectSide };
 
     try {
-      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v1/deck/add', {
+      // 現在の保存データの最大 ID を取得
+      const maxId = await db.decks.toCollection().keys()
+        .then((keys) => (keys.length > 0 ? Math.max(...keys) : 0)); // 最大値がなければ 0 を返す
+      const currentId = maxId + 1; // 最大値の次の数
+
+      // デッキデータ作成
+      const objectDeck = {
+        id: currentId, // 手動で id を設定
+        key: currentId, // 同じ値を key にも設定
+        timestamp,
+        main: objectMain,
+        side: objectSide,
+      };
+
+      // サーバーにデッキデータを送信
+      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/deck/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deckData: objectDeck }),
@@ -57,11 +71,13 @@ function TabPaneDeck({
         throw new Error(data.message || 'デッキの送信に失敗しました');
       }
 
-      objectDeck.code = data.code;
+      objectDeck.code = data.code; // サーバーから返却されたコードを保存
 
-      const idDeck = await db.decks.add(objectDeck);
+      // IndexedDB に保存
+      await db.decks.put(objectDeck); // 手動で設定した id をそのまま保存
 
-      handleSetActiveDeckSaved(idDeck);
+      // アクティブデッキとタブの更新
+      handleSetActiveDeckSaved(currentId);
       handleSetActiveTab(enumTabPane.SAVE_AND_LOAD);
     } catch (error) {
       console.error('デッキ送信中にエラーが発生しました:', error);

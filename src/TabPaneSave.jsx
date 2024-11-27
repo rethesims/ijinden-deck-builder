@@ -16,18 +16,10 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from './db';
 
-// 必要なインポートを再度追加
 import { dataCardsArrayForDeck } from './dataCards';
 import ImageCard from './ImageCard';
 import { enumActionSimulator } from './reducerSimulator';
 import enumTabPane from './enumTabPane';
-
-// 未使用のインポートを削除
-// import { dataCardsArrayForDeck } from './dataCards';
-// import enumTabPane from './enumTabPane';
-// import ImageCard from './ImageCard';
-// import { enumActionSimulator } from './reducerSimulator';
-// import { sum } from './utils';
 
 const DTF = new Intl.DateTimeFormat([], {
   year: 'numeric',
@@ -37,6 +29,13 @@ const DTF = new Intl.DateTimeFormat([], {
   minute: '2-digit',
   second: '2-digit',
 });
+
+// 一意のIDを生成する関数
+let keywordIdCounter = 0;
+function generateId() {
+  keywordIdCounter += 1;
+  return keywordIdCounter;
+}
 
 function TabPaneSave({
   handleSetDeckMain,
@@ -52,6 +51,11 @@ function TabPaneSave({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [deckToUpload, setDeckToUpload] = useState(null);
+  const [deckName, setDeckName] = useState('');
+  const [keywords, setKeywords] = useState([{ id: generateId(), value: '' }]);
+  const [deckDescription, setDeckDescription] = useState('');
   const decksSaved = useLiveQuery(async () => db.decks.orderBy(':id').reverse().toArray(), []);
 
   function handleSelectAccordion(eventKey) {
@@ -170,6 +174,69 @@ function TabPaneSave({
     }
   }
 
+  function handleUploadClick(aDeckSaved) {
+    setDeckToUpload(aDeckSaved);
+    setShowUploadModal(true);
+  }
+
+  // キーワード入力を動的に管理する関数
+  function handleKeywordChange(id, value) {
+    const newKeywords = keywords.map((kw) => (kw.id === id ? { ...kw, value } : kw));
+    setKeywords(newKeywords);
+  }
+
+  function addKeywordInput() {
+    setKeywords([...keywords, { id: generateId(), value: '' }]);
+  }
+
+  function removeKeywordInput(id) {
+    if (keywords.length === 1) return; // 最後の入力欄は削除しない
+    const newKeywords = keywords.filter((kw) => kw.id !== id);
+    setKeywords(newKeywords);
+  }
+
+  async function handleUploadDeck() {
+    if (!deckName.trim()) {
+      setErrorMessage('デッキ名を入力してください');
+      setShowErrorModal(true);
+      return;
+    }
+
+    const keywordsArray = keywords.map((kw) => kw.value.trim()).filter((kw) => kw);
+
+    const dataToUpload = {
+      name: deckName,
+      keywords: keywordsArray,
+      description: deckDescription,
+      deckData: {
+        main: deckToUpload.main,
+        side: deckToUpload.side,
+        code: deckToUpload.code,
+      },
+    };
+
+    try {
+      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/deck/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToUpload),
+      });
+
+      if (!response.ok) {
+        throw new Error('アップロードに失敗しました');
+      }
+
+      setShowSuccessModal(true);
+      setShowUploadModal(false);
+      setDeckName('');
+      setKeywords([{ id: generateId(), value: '' }]);
+      setDeckDescription('');
+    } catch (error) {
+      setErrorMessage(error.message);
+      setShowErrorModal(true);
+    }
+  }
+
   // 条件に応じたコンテンツを定義
   let content;
 
@@ -211,6 +278,7 @@ function TabPaneSave({
                     handleSetDeckSide={handleSetDeckSide}
                     handleSetActiveTab={handleSetActiveTab}
                     dispatchSimulator={dispatchSimulator}
+                    handleUploadClick={handleUploadClick} // 追加
                   />
                 </AccordionBody>
               </AccordionItem>
@@ -305,6 +373,63 @@ function TabPaneSave({
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* アップロードモーダル */}
+      <Modal show={showUploadModal} onHide={() => setShowUploadModal(false)}>
+        <ModalHeader closeButton>
+          <ModalTitle>デッキをアップロード</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <Form.Group className="mb-3">
+            <Form.Label>デッキ名</Form.Label>
+            <Form.Control
+              type="text"
+              value={deckName}
+              onChange={(e) => setDeckName(e.target.value)}
+              placeholder="デッキ名を入力"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>キーワード</Form.Label>
+            {keywords.map((keywordObj, index) => (
+              <div key={keywordObj.id} className="d-flex mb-2">
+                <Form.Control
+                  type="text"
+                  value={keywordObj.value}
+                  onChange={(e) => handleKeywordChange(keywordObj.id, e.target.value)}
+                  placeholder="キーワードを入力"
+                />
+                <Button variant="outline-danger" onClick={() => removeKeywordInput(keywordObj.id)} className="ms-2">
+                  -
+                </Button>
+                {index === keywords.length - 1 && (
+                  <Button variant="outline-primary" onClick={addKeywordInput} className="ms-2">
+                    +
+                  </Button>
+                )}
+              </div>
+            ))}
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>デッキの説明</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={deckDescription}
+              onChange={(e) => setDeckDescription(e.target.value)}
+              placeholder="デッキの説明を入力"
+            />
+          </Form.Group>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowUploadModal(false)}>
+            キャンセル
+          </Button>
+          <Button variant="primary" onClick={handleUploadDeck}>
+            アップロード
+          </Button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 }
@@ -316,6 +441,7 @@ function ContainerDeckSaved({
   handleSetDeckSide,
   handleSetActiveTab,
   dispatchSimulator,
+  handleUploadClick, // 追加
 }) {
   function handleClickLoad() {
     handleSetDeckMain(new Map(aDeckSaved.main));
@@ -342,6 +468,9 @@ function ContainerDeckSaved({
         <Button variant="outline-danger" onClick={handleClickDelete}>
           削除
         </Button>
+        <Button variant="outline-primary" onClick={() => handleUploadClick(aDeckSaved)}>
+          アップロード
+        </Button>
       </div>
       <ContainerDeckSavedPart title="メインデッキ" deckSaved={new Map(aDeckSaved.main)} />
       <ContainerDeckSavedPart title="サイドデッキ" deckSaved={new Map(aDeckSaved.side)} />
@@ -358,7 +487,6 @@ function ContainerDeckSavedPart({ title, deckSaved }) {
     <>
       <h3 className="mb-1">{titleFull}</h3>
       <div className="overflow-auto mb-1" style={{ minHeight: 60, maxHeight: 300 }}>
-        {/* 必要であれば dataCardsArrayForDeck や ImageCard を使用 */}
         {dataCardsArrayForDeck.map((card) => (deckSaved.has(card.id) ? (
           <ImageCard
             key={card.id}

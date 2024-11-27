@@ -9,58 +9,15 @@ import TabPaneCard from './TabPaneCard';
 import TabPaneDeck from './TabPaneDeck';
 import TabPaneSave from './TabPaneSave';
 import TabPaneSimulator from './TabPaneSimulator';
+import TabPaneUploadedDecks from './TabPaneUploadedDecks';
 import enumTabPane from './enumTabPane';
 import { enumStateSimulator, reducerSimulator } from './reducerSimulator';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
-
 import './App.css';
 import db from './db';
 
 function App() {
-  // localStorage のマイデッキを IndexedDB へ移行する。
-  //
-  // フェッチのキャンセルのパターンにあわせてコードを書いたつもりだが、
-  // Strict Mode の開発環境ではどうしても2回実行されてしまい、
-  // 移行元のデッキが移行先でダブる事象を確認した。それとあわせて、
-  // Strict Mode を外す (本番環境を模倣する) とダブらないことも確認した。
-  //
-  // Strict Mode を外した本番環境では意図どおりに動くはずであること、
-  // またこのコードが必要な期間が1週間程度と長くないことから、
-  // このコードで妥協して本番環境にデプロイすることにする。
-  //
-  // このコードが不要になったらマイデッキのベータを外すこと。
-  //
-  useEffect(() => {
-    let active = true;
-
-    const moveDecks = async () => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      // localStorage からデッキを読み込む
-      const stringifiedDecks = window.localStorage.getItem('ijinden-deck-builder');
-      if (stringifiedDecks === null) {
-        return;
-      }
-      const decksToBeMoved = JSON.parse(stringifiedDecks).map((e) => ({
-        // IDとタイムスタンプは新しくする
-        ...e[1], timestamp: new Date(),
-      }));
-      if (active) {
-        // IndexedDB へデッキを保存する
-        await db.decks.bulkAdd(decksToBeMoved);
-        // localStorage のデータを削除する
-        window.localStorage.setItem('ijinden-deck-builder', '[]');
-      }
-    };
-    moveDecks();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const [deckMain, setDeckMain] = useState(new Map());
   const [deckSide, setDeckSide] = useState(new Map());
   const [activeTab, setActiveTab] = useState(enumTabPane.CARD);
@@ -70,6 +27,7 @@ function App() {
     enumStateSimulator.INITIAL,
   );
 
+  // デッキ設定の関数
   function handleSetDeckMain(newDeckMain) {
     setDeckMain(newDeckMain);
   }
@@ -89,12 +47,17 @@ function App() {
   return (
     <>
       <h1 className="m-2">イジンデン デッキ作成_デッキ共有版</h1>
+
       <Tabs
         activeKey={activeTab}
         defaultActiveKey={enumTabPane.CARD}
         transition={false}
-        onSelect={(k) => setActiveTab(k)}
+        onSelect={(k) => {
+          console.log('Selected Tab:', k); // タブ選択を確認
+          setActiveTab(Number(k)); // 必ず数値として扱う
+        }}
       >
+        {/* カードタブ */}
         <Tab eventKey={enumTabPane.CARD} title="カード">
           <TabPaneCard
             deckMain={deckMain}
@@ -104,6 +67,8 @@ function App() {
             dispatchSimulator={dispatchSimulator}
           />
         </Tab>
+
+        {/* レシピタブ */}
         <Tab eventKey={enumTabPane.DECK} title="レシピ">
           <TabPaneDeck
             deckMain={deckMain}
@@ -115,6 +80,8 @@ function App() {
             dispatchSimulator={dispatchSimulator}
           />
         </Tab>
+
+        {/* マイデッキタブ */}
         <Tab eventKey={enumTabPane.SAVE_AND_LOAD} title="マイデッキ">
           <TabPaneSave
             handleSetDeckMain={handleSetDeckMain}
@@ -125,90 +92,79 @@ function App() {
             dispatchSimulator={dispatchSimulator}
           />
         </Tab>
+
+        {/* シミュレータタブ */}
         <Tab eventKey={enumTabPane.SIMULATOR} title="シミュ">
-          <TabPaneSimulator deck={deckMain} state={stateSimulator} dispatch={dispatchSimulator} />
+          <TabPaneSimulator
+            deck={deckMain}
+            state={stateSimulator}
+            dispatch={dispatchSimulator}
+          />
         </Tab>
+
+        {/* デッキ掲示板タブ */}
+        <Tab eventKey={enumTabPane.UPLOADED_DECKS} title="デッキ掲示板">
+          <TabPaneUploadedDecks
+            handleSetDeckMain={handleSetDeckMain}
+            handleSetDeckSide={handleSetDeckSide}
+            handleSetActiveTab={handleSetActiveTab}
+            dispatchSimulator={dispatchSimulator}
+            activeTab={activeTab} // アクティブなタブ情報を渡す
+          />
+        </Tab>
+
+        {/* ヘルプタブ */}
         <Tab eventKey={enumTabPane.HELP} title="ヘルプ" className="mx-2 mt-2">
-          <h2>これは何？</h2>
-          <p>イジンデンのデッキレシピを作成するアプリです。</p>
-          <h2>マイデッキ利用時のご注意</h2>
-          {/* eslint-disable max-len */}
-          <Alert variant="warning">マイデッキは「サイトデータ」として端末のブラウザに保存しているため、Safari では「履歴と Web サイトデータを消去」、Chrome では「クッキーと他のサイトデータ」を削除するとクリアされてしまうことにご注意ください。他のブラウザでも同様です。</Alert>
-          {/* eslint-enable max-len */}
-          <Alert variant="info">端末やブラウザをまたいでは同じマイデッキを利用できませんのでご承知ください。</Alert>
-          <h2>快適にご利用いただくために</h2>
-          <Alert variant="success">
-            あらかじめ通信環境の良いところで、イジンデン公式サイトの「
-            <a href="https://one-draw.jp/ijinden/cardlist.html">カードリスト</a>
-            」以下にある各エキスパンションのページを開いて、すべてのカード画像を読み込んでおいてください。これはカード画像のキャッシュを有効にするためです。
-          </Alert>
-          <h2>特徴</h2>
-          <ul>
-            <li>デッキ枚数の上限なし</li>
-            <li>デッキのカード枚数はカード名ごとに数字で表示</li>
-            <li>メインデッキとサイドデッキを別個に管理可能</li>
-            <li>デッキのカードの並びは種類、レベル、色、魔力コスト、エキスパンション順</li>
-            <li>レシピを「マイデッキ」としてブラウザに保存可能</li>
-          </ul>
-          <h2>操作方法</h2>
-          <h3>カード</h3>
-          <p>各カードのプラス・マイナスボタンで、メインデッキ・サイドデッキ別々に枚数を増減できます。エキスパンション、色、種類、能力語でカードの絞り込みができます。</p>
-          <h3>レシピ</h3>
-          {/* eslint-disable max-len */}
-          <p>カードの左下をタップする (パソコンではカードの上にマウスカーソルを当てる) と、そのカードに重なるボタンが現れます。各ボタンで枚数の増減やメインデッキ・サイドデッキの入換え、カード画像のズームができます。</p>
-          {/* eslint-enable max-len */}
-          <p>保存ボタンで作成したレシピをマイデッキに保存できます。また、クリアボタンでレシピを最初から編集し直すことができます。</p>
-          <h3>マイデッキ</h3>
-          <p>保存した各レシピのボタンで読込みや削除ができます。保存済みレシピをすべて削除することもできます。</p>
-          <Alert variant="info">レシピの番号は飛び飛びになることがありますのでご承知ください。これは削除したレシピの番号を再利用していないためです。</Alert>
-          <h3>シミュ (手札シミュレータ)</h3>
-          {/* eslint-disable max-len */}
-          <p>対戦開始時のガーディアンと手札、およびその後のドローをランダムに表示します。</p>
-          <p>スタートボタンを押した直後は対戦開始前の状態であり、マリガン (引き直す) ボタンかキープ (引き直さない) ボタンを押すと手札とドローが確定します。リセットボタンでやり直します。</p>
-          <p>灰色のガーディアンはタップする (パソコンではカードの上にマウスカーソルを当てる) とオモテ面のカード画像が表示されます。</p>
-          {/* eslint-enable max-len */}
-          <h2>未対応機能</h2>
-          <h3>自前の画像保存</h3>
-          <p>OS のスクリーンショット機能で保存願います。</p>
-          <ul>
-            <li>
-              Windows:
-              {' '}
-              <a href="https://support.microsoft.com/ja-jp/windows/snipping-tool-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%BC%E3%83%B3-%E3%82%B7%E3%83%A7%E3%83%83%E3%83%88%E3%82%92%E3%82%AD%E3%83%A3%E3%83%97%E3%83%81%E3%83%A3%E3%81%99%E3%82%8B-00246869-1843-655f-f220-97299b865f6b">Snipping Tool を使ってスクリーン ショットをキャプチャする</a>
-            </li>
-            <li>
-              Android:
-              {' '}
-              <a href="https://support.google.com/android/answer/9075928?hl=ja&sjid=12199801082883893448-AP">Android デバイスで画面の画像（スクリーンショット）または動画を撮影する</a>
-              {' '}
-              → スクロール スクリーンショットを撮る
-            </li>
-            <li>
-              iPhone:
-              {' '}
-              <a href="https://support.apple.com/ja-jp/guide/iphone/iphc872c0115/ios">iPhoneでスクリーンショットを撮る</a>
-              {' '}
-              → フルページのスクリーンショットを撮る
-            </li>
-          </ul>
-          <h3>高度な検索</h3>
-          <p>お手数ですがカードリストから探してください。</p>
-          <h3>並び順の変更</h3>
-          <p>ご面倒ですがこのまま使用ください。</p>
-          <h3>PSR カード</h3>
-          <p>対応する SR のカードを使用ください。</p>
-          <h2>連絡先</h2>
-          <p>
-            普段は Discord の「
-            <a href="https://discord.com/invite/3dPgu5G9uB">
-              天草サーバー
-            </a>
-            」にいます。
-          </p>
-          <h3>リポジトリ</h3>
-          <p><a href="https://github.com/sweetpotato/ijinden-deck-builder/">https://github.com/sweetpotato/ijinden-deck-builder/</a></p>
-          <h3>メールアドレス</h3>
-          <p>すいーとポテト &lt;sweetpotato DOT quarter PLUS github AT gmail DOT com&gt;</p>
+          <div className="p-3">
+            <h2>これは何？</h2>
+            <p>
+              すいーとポテト様が作成した機能をもとに、デッキコード発行とデッキ掲示板の機能を追加したアプリです。
+              <a href="https://sweetpotato.github.io/ijinden-deck-builder/">元サイト</a>
+            </p>
+
+            <h2>マイデッキ利用時のご注意</h2>
+            <Alert variant="warning">
+              マイデッキに保存されたデッキは、自動でコードが発行されます。
+              この時点ではデッキが公開されるわけではありませんが、コードが漏洩すると他のユーザーがそのデッキを利用できるようになります。
+              また、コードを発行するため、少しの間通信が必要です。
+            </Alert>
+
+            <h2>デッキアップロードについて</h2>
+            <Alert variant="info">
+              マイデッキに保存されたデッキは、デッキ掲示板にアップロード可能です。
+              デッキアップロード時は、デッキ名、説明、キーワードを設定してください。
+              キーワードは複数設定可能で、デッキ検索時に利用されます。
+              作者名やデッキタイプ、キーカードなどを設定しておくと、他のユーザーがデッキを探しやすくなります。
+            </Alert>
+
+            <h2>デッキ掲示板について</h2>
+            <Alert variant="warning">
+              デッキ掲示板には、他のユーザーが公開したデッキが表示されます。
+              タブを開いたら、最新10件のデッキが表示されます。
+              また、デッキアップロード時に設定されたキーワードで検索することもできます。(キーワードに合致するデッキのうち最新50件まで)
+            </Alert>
+
+            <h2>快適にご利用いただくために</h2>
+            <Alert variant="success">
+              あらかじめ通信環境の良いところで、イジンデン公式サイトの
+              <a href="https://one-draw.jp/ijinden/cardlist.html">カードリスト</a>
+              以下にある各エキスパンションのページを開いて、すべてのカード画像を読み込んでおいてください。これはカード画像のキャッシュを有効にするためです。
+            </Alert>
+
+            <h2>特徴</h2>
+            <ul>
+              <li>デッキ枚数の上限なし</li>
+              <li>デッキのカード枚数はカード名ごとに数字で表示</li>
+              <li>メインデッキとサイドデッキを別個に管理可能</li>
+              <li>デッキのカードの並びは種類、レベル、色、魔力コスト、エキスパンション順</li>
+              <li>レシピを「マイデッキ」としてブラウザに保存可能</li>
+            </ul>
+
+            <h2>連絡先</h2>
+            <p>
+              ムヨン &lt;rethesims AT yahoo DOT co DOT jp&gt;
+            </p>
+          </div>
         </Tab>
       </Tabs>
     </>

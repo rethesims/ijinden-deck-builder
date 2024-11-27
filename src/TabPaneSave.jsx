@@ -223,7 +223,16 @@ function TabPaneSave({
       });
 
       if (!response.ok) {
-        throw new Error('アップロードに失敗しました');
+        const errorData = await response.json(); // サーバーのエラーメッセージを取得
+        const errorMessage = errorData || 'アップロードに失敗しました';
+  
+        // サーバー側のエラーメッセージに応じた処理
+        if (errorMessage.includes('同じデッキが既に存在します')) {
+          setErrorMessage('同じデッキが既に存在します');
+        } else {
+          setErrorMessage(errorMessage);
+        }
+        throw new Error(errorMessage);
       }
 
       setShowSuccessModal(true);

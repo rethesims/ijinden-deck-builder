@@ -64,11 +64,10 @@ function TabPaneUploadedDecks({
 
   useEffect(() => {
     if (activeTab === enumTabPane.UPLOADED_DECKS) {
-      const searchData = isInitialLoad
-        ? { keyword: 'deck', get_count: 10 } // 初回ロード用
-        : { keyword, get_count: 50 }; // 通常検索用
+      // デフォルト検索条件でリセットして検索
+      const searchData = { keyword: 'deck', get_count: 10 }; // デフォルト検索用
+      setKeyword('親鸞'); // 検索フォームのキーワードもリセット
       fetchUploadedDecks(searchData, setUploadedDecks, setErrorMessage);
-      setIsInitialLoad(false); // 初回ロードが終わったらフラグをオフに
     } else {
       setUploadedDecks(null); // タブが変わったらデータをリセット
     }

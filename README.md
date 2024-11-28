@@ -6,9 +6,9 @@
 作成中です
 
 
-GitHub Pages でアプリを公開しています。公開ページは次の URL です。
+Amplify でアプリを公開しています。公開ページは次の URL です。
 
-https://sweetpotato.github.io/ijinden-deck-builder/
+https://test.d3549oz7huwdgv.amplifyapp.com/
 
 
 ## 特徴

@@ -1,224 +1,436 @@
 // SPDX-License-Identifier: MIT
 
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { useState, useRef } from 'react';
+import { Alert, Button } from 'react-bootstrap';
 
-import App from "./App";
+import ImageCard from './ImageCard';
+import { enumActionSimulator, enumStateSimulator } from './reducerSimulator';
+import { dataCardsMap as dataCards } from './dataCards';
+import { sum } from './utils';
 
-test('メインデッキが9枚以下だとスタートできない', async () => {
-  render(<App />);
+function excludeCards(array, deck) {
+  array.forEach((element) => {
+    const numCopies = deck.get(element);
+    if (numCopies > 1) {
+      deck.set(element, numCopies - 1);
+    } else {
+      deck.delete(element);
+    }
+  });
+  return deck;
+}
 
-  const user = userEvent.setup();
+function makeIdArray(deck) {
+  const result = [];
+  for (const [id, numCopies] of deck.entries()) {
+    for (let i = 0; i < numCopies; i += 1) {
+      result.push(id);
+    }
+  }
+  return result;
+}
 
-  const tabCard = screen.getAllByRole('tab')[0];
-  const tabSimulator = screen.getAllByRole('tab')[3];
-  const paneCard = screen.getAllByRole('tabpanel')[0];
-  const paneSimulator = screen.getAllByRole('tabpanel')[3];
+function makeRandomIndices(n) {
+  const result = [];
+  for (let i = 0; i < n; i += 1) {
+    result.push(i);
+  }
+  // シャッフルする
+  for (let i = n - 1; i >= 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
-  // 適当なカードのメインとサイドのプラスボタンを得る
-  const buttonPlusMain = paneCard.querySelector('td:nth-child(3) button:nth-child(3)');
-  const buttonPlusSide = paneCard.querySelector('td:nth-child(4) button:nth-child(3)');
+function setupCards(n, idArray, randomIndices) {
+  const result = [];
+  for (let i = 0; i < n; i += 1) {
+    result.push(idArray.at(randomIndices.pop()));
+  }
+  return result;
+}
 
-  await user.click(tabSimulator);
-  expect(paneSimulator).toHaveClass('active');
-  expect(paneSimulator).toBeVisible();
+function setupGuardians(idArray, randomIndices) {
+  // ガーディアン4枚
+  return setupCards(4, idArray, randomIndices);
+}
 
-  const buttonReset = paneSimulator.querySelector('.container-button button:nth-child(1)');
-  const buttonStart = paneSimulator.querySelector('.container-button button:nth-child(2)');
-  const buttonMulligan = paneSimulator.querySelector('.container-button button:nth-child(3)');
-  const buttonKeep = paneSimulator.querySelector('.container-button button:nth-child(4)');
+function setupHands(idArray, randomIndices) {
+  // 手札6枚
+  return setupCards(6, idArray, randomIndices);
+}
 
-  expect(buttonReset.textContent).toBe('リセット');
-  expect(buttonStart.textContent).toBe('スタート');
-  expect(buttonMulligan.textContent).toBe('マリガン');
-  expect(buttonKeep.textContent).toBe('キープ');
+function TabPaneSimulator({ deck, state, dispatch }) {
+  // プレイヤーの状態管理
+  const [playerGuardians, setPlayerGuardians] = useState(null);
+  const [playerHands, setPlayerHands] = useState(null);
+  const [playerDeck, setPlayerDeck] = useState(null);
+  const [playerMagicZone, setPlayerMagicZone] = useState([]);
+  const [playerBattlefield, setPlayerBattlefield] = useState([]);
+  const [playerGraveyard, setPlayerGraveyard] = useState([]);
+  const [playerMagicPlacementRights, setPlayerMagicPlacementRights] = useState(1);
+  const [playerIjinSummonRights, setPlayerIjinSummonRights] = useState(1);
 
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+  // 敵の状態管理
+  const [enemyGuardians, setEnemyGuardians] = useState(null);
+  const [enemyHands, setEnemyHands] = useState(null);
+  const [enemyDeck, setEnemyDeck] = useState(null);
+  const [enemyMagicZone, setEnemyMagicZone] = useState([]);
+  const [enemyBattlefield, setEnemyBattlefield] = useState([]);
+  const [enemyGraveyard, setEnemyGraveyard] = useState([]);
 
-  // メインのプラスボタンを9回押す
-  await user.click(tabCard);
-  expect(paneCard).toHaveClass('active');
-  expect(paneCard).toBeVisible();
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  
-  // サイドのプラスボタンを10回押す
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
-  await user.click(buttonPlusSide);
+  const [turn, setTurn] = useState('player'); // 'player' or 'enemy'
+  const [battleLog, setBattleLog] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const logIdRef = useRef(0);
 
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+  function handleClickReset() {
+    setPlayerGuardians(null);
+    setPlayerHands(null);
+    setPlayerDeck(null);
+    setPlayerMagicZone([]);
+    setPlayerBattlefield([]);
+    setPlayerGraveyard([]);
+    setPlayerMagicPlacementRights(1);
+    setPlayerIjinSummonRights(1);
 
-  // スタートボタンを押す
-  await user.click(buttonStart);
+    setEnemyGuardians(null);
+    setEnemyHands(null);
+    setEnemyDeck(null);
+    setEnemyMagicZone([]);
+    setEnemyBattlefield([]);
+    setEnemyGraveyard([]);
 
-  // 開始できず、アラートが表示される
-  expect(buttonReset).toBeEnabled();
-  expect(buttonStart).toBeDisabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  let alert = paneSimulator.querySelector('.alert-warning');
-  expect(alert.textContent).toBe('メインデッキの枚数が少なすぎます。10枚以上にしてください。');
-  expect(alert).toBeVisible();
+    setTurn('player');
+    setBattleLog([]);
+    setErrorMessage(null);
+    dispatch(enumActionSimulator.RESET);
+  }
 
-  // リセットボタンを押す
-  await user.click(buttonReset);
+  function handleClickStart() {
+    const numCards = sum(deck.values());
+    if (numCards < 20) {
+      dispatch(enumActionSimulator.CHECK_MAIN_DECK);
+      return;
+    }
+    const idArray = makeIdArray(deck);
+    const randomIndices = makeRandomIndices(numCards);
 
-  // アラートが消える
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-}, 30000);
+    // プレイヤーのデッキセットアップ
+    const playerGuardiansSetup = setupGuardians(idArray, randomIndices);
+    const playerHandsSetup = setupHands(idArray, randomIndices);
+    const playerDeckRemaining = excludeCards(
+      playerGuardiansSetup,
+      excludeCards(playerHandsSetup, new Map(deck)),
+    );
+    const playerDeckArray = makeIdArray(playerDeckRemaining);
 
-test('メインデッキが10枚以上でスタートできる', async () => {
-  render(<App />);
+    // 敵のデッキセットアップ（同じデッキを使用する場合）
+    const enemyGuardiansSetup = setupGuardians(idArray, randomIndices);
+    const enemyHandsSetup = setupHands(idArray, randomIndices);
+    const enemyDeckRemaining = excludeCards(
+      enemyGuardiansSetup,
+      excludeCards(enemyHandsSetup, new Map(deck)),
+    );
+    const enemyDeckArray = makeIdArray(enemyDeckRemaining);
 
-  const user = userEvent.setup();
+    setPlayerGuardians(playerGuardiansSetup);
+    setPlayerHands(playerHandsSetup);
+    setPlayerDeck(playerDeckArray);
 
-  const tabCard = screen.getAllByRole('tab')[0];
-  const tabSimulator = screen.getAllByRole('tab')[3];
-  const paneCard = screen.getAllByRole('tabpanel')[0];
-  const paneSimulator = screen.getAllByRole('tabpanel')[3];
+    setEnemyGuardians(enemyGuardiansSetup);
+    setEnemyHands(enemyHandsSetup);
+    setEnemyDeck(enemyDeckArray);
 
-  // 適当なカードのメインのプラスボタンを得る
-  const buttonPlusMain = paneCard.querySelector('td:nth-child(3) button:nth-child(3)');
+    dispatch(enumActionSimulator.START);
+  }
 
-  await user.click(tabSimulator);
-  expect(paneSimulator).toHaveClass('active');
-  expect(paneSimulator).toBeVisible();
+  function handleClickNextTurn() {
+    if (turn === 'player') {
+      // プレイヤーのターン開始処理
+      setPlayerMagicPlacementRights(1);
+      setPlayerIjinSummonRights(1);
 
-  const buttonReset = paneSimulator.querySelector('.container-button button:nth-child(1)');
-  const buttonStart = paneSimulator.querySelector('.container-button button:nth-child(2)');
-  const buttonMulligan = paneSimulator.querySelector('.container-button button:nth-child(3)');
-  const buttonKeep = paneSimulator.querySelector('.container-button button:nth-child(4)');
+      // カードを1枚ドロー
+      if (playerDeck.length > 0) {
+        const newCard = playerDeck[0];
+        setPlayerDeck(playerDeck.slice(1));
+        setPlayerHands([...playerHands, newCard]);
+        setBattleLog((prevLogs) => [
+          ...prevLogs,
+          {
+            id: logIdRef.current,
+            message: 'あなたはカードを1枚ドローしました。',
+          },
+        ]);
+        logIdRef.current += 1;
+      } else {
+        setBattleLog((prevLogs) => [
+          ...prevLogs,
+          {
+            id: logIdRef.current,
+            message: 'あなたのデッキが尽きました。',
+          },
+        ]);
+        logIdRef.current += 1;
+      }
+      // ターンプレイヤーを変更しない（プレイヤーの行動を待つ）
+    } else {
+      // 敵のターン開始処理
+      // カードを1枚ドロー
+      if (enemyDeck.length > 0) {
+        const newCard = enemyDeck[0];
+        setEnemyDeck(enemyDeck.slice(1));
+        setEnemyHands([...enemyHands, newCard]);
+        setBattleLog((prevLogs) => [
+          ...prevLogs,
+          {
+            id: logIdRef.current,
+            message: '敵がカードを1枚ドローしました。',
+          },
+        ]);
+        logIdRef.current += 1;
+      } else {
+        setBattleLog((prevLogs) => [
+          ...prevLogs,
+          {
+            id: logIdRef.current,
+            message: '敵のデッキが尽きました。',
+          },
+        ]);
+        logIdRef.current += 1;
+      }
 
-  expect(buttonReset.textContent).toBe('リセット');
-  expect(buttonStart.textContent).toBe('スタート');
-  expect(buttonMulligan.textContent).toBe('マリガン');
-  expect(buttonKeep.textContent).toBe('キープ');
+      // 敵のターン処理（何もしない）
+      // 敵のターン終了時にプレイヤーのターンに移行
+      setTurn('player');
+      setBattleLog((prevLogs) => [
+        ...prevLogs,
+        {
+          id: logIdRef.current,
+          message: '敵のターンが終了しました。',
+        },
+      ]);
+      logIdRef.current += 1;
+    }
+  }
 
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+  function handleEndPlayerTurn() {
+    // プレイヤーのターン終了時に敵のターンに移行
+    setTurn('enemy');
+    setBattleLog((prevLogs) => [
+      ...prevLogs,
+      {
+        id: logIdRef.current,
+        message: 'あなたのターンが終了しました。',
+      },
+    ]);
+    logIdRef.current += 1;
 
-  // メインのプラスボタンを10回押す
-  await user.click(tabCard);
-  expect(paneCard).toHaveClass('active');
-  expect(paneCard).toBeVisible();
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  await user.click(buttonPlusMain);
-  
-  // 1a. スタートボタンを押す
-  await user.click(buttonStart);
+    // 次のターン処理を呼び出す
+    handleClickNextTurn();
+  }
 
-  // 1b. シミュレータが開始される
-  expect(buttonReset).toBeEnabled();
-  expect(buttonStart).toBeDisabled();
-  expect(buttonMulligan).toBeEnabled();
-  expect(buttonKeep).toBeEnabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+  function handlePlayCard(cardId, zone) {
+    if (turn !== 'player') {
+      setErrorMessage('あなたのターンではありません。');
+      return;
+    }
 
-  // 1c. リセットボタンを押す
-  await user.click(buttonReset);
+    const cardIndex = playerHands.findIndex((id) => id === cardId);
+    if (cardIndex === -1) {
+      setErrorMessage('そのカードは手札にありません。');
+      return;
+    }
 
-  // 1d. 初期状態に戻る
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+    const card = dataCards.get(cardId);
 
-  // 2a. スタートボタンを押す
-  await user.click(buttonStart);
+    if (zone === 'magic') {
+      if (playerMagicPlacementRights < 1) {
+        setErrorMessage('魔力配置権がありません。');
+        return;
+      }
+      setPlayerMagicPlacementRights(playerMagicPlacementRights - 1);
+      setPlayerMagicZone([...playerMagicZone, cardId]);
+      setBattleLog((prevLogs) => [
+        ...prevLogs,
+        {
+          id: logIdRef.current,
+          message: `あなたは「${card.name}」を魔力ゾーンに配置しました。`,
+        },
+      ]);
+      logIdRef.current += 1;
+    } else if (zone === 'battlefield') {
+      if (playerIjinSummonRights < 1) {
+        setErrorMessage('イジン召喚権がありません。');
+        return;
+      }
+      setPlayerIjinSummonRights(playerIjinSummonRights - 1);
+      setPlayerBattlefield([...playerBattlefield, cardId]);
+      setBattleLog((prevLogs) => [
+        ...prevLogs,
+        {
+          id: logIdRef.current,
+          message: `あなたは「${card.name}」を戦場に召喚しました。`,
+        },
+      ]);
+      logIdRef.current += 1;
+    }
 
-  // 2b. シミュレータが開始される
-  expect(buttonReset).toBeEnabled();
-  expect(buttonStart).toBeDisabled();
-  expect(buttonMulligan).toBeEnabled();
-  expect(buttonKeep).toBeEnabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+    // 手札からカードを削除
+    const newHand = [...playerHands];
+    newHand.splice(cardIndex, 1);
+    setPlayerHands(newHand);
+  }
 
-  // 2c. マリガンボタンを押す
-  await user.click(buttonMulligan);
+  const enabledStart = state === enumStateSimulator.INITIAL;
+  const enabledReset = state !== enumStateSimulator.INITIAL;
+  const enabledNextTurn = state === enumStateSimulator.RUNNING;
+  const showBattlefield =
+    state === enumStateSimulator.RUNNING ||
+    state === enumStateSimulator.FINISHED;
 
-  // 2d. シミュレータが終了する
-  expect(buttonReset).toBeEnabled();
-  expect(buttonStart).toBeDisabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
+  return (
+    <>
+      <h2 className="m-2">対戦シミュレータ</h2>
+      {errorMessage && (
+        <Alert
+          variant="danger"
+          onClose={() => setErrorMessage(null)}
+          dismissible
+          className="m-2"
+        >
+          {errorMessage}
+        </Alert>
+      )}
+      <div className="container-button mx-2 mt-2 mb-3">
+        <Button
+          variant="outline-danger"
+          onClick={handleClickReset}
+          disabled={!enabledReset}
+        >
+          リセット
+        </Button>
+        <Button
+          variant="outline-success"
+          onClick={handleClickStart}
+          disabled={!enabledStart}
+        >
+          スタート
+        </Button>
+        <Button
+          variant="outline-primary"
+          onClick={handleClickNextTurn}
+          disabled={!enabledNextTurn || turn !== 'enemy'}
+        >
+          次のターン
+        </Button>
+      </div>
+      {state === enumStateSimulator.LESS_THAN_TEN && (
+        <Alert variant="warning">
+          メインデッキの枚数が少なすぎます。20枚以上にしてください。
+        </Alert>
+      )}
+      {state === enumStateSimulator.ABORTED && (
+        <Alert variant="warning">
+          シミュレーション中にメインデッキが編集されました。リセットしてください。
+        </Alert>
+      )}
+      {showBattlefield && (
+        <>
+          <h3 className="m-2">敵のフィールド</h3>
+          <ContainerSection
+            title="ガーディアン"
+            cards={enemyGuardians}
+            guardian
+          />
+          <ContainerSection title="手札" cards={enemyHands} />
+          <ContainerSection title="魔力ゾーン" cards={enemyMagicZone} />
+          <ContainerSection title="戦場" cards={enemyBattlefield} />
+          <ContainerSection title="墓地" cards={enemyGraveyard} />
+          <hr />
+          <h3 className="m-2">あなたのフィールド</h3>
+          <ContainerSection
+            title="ガーディアン"
+            cards={playerGuardians}
+            guardian
+          />
+          <ContainerSection title="魔力ゾーン" cards={playerMagicZone} />
+          <ContainerSection title="戦場" cards={playerBattlefield} />
+          <ContainerSection title="墓地" cards={playerGraveyard} />
+          <ContainerSection title="手札" cards={playerHands}>
+            {turn === 'player' &&
+              playerHands.map((cardId) => {
+                const card = dataCards.get(cardId);
+                return (
+                  <div key={cardId} className="card-action">
+                    <ImageCard imageUrl={card.imageUrl} alt={card.name} />
+                    <Button
+                      variant="outline-info"
+                      onClick={() => handlePlayCard(cardId, 'magic')}
+                      disabled={playerMagicPlacementRights < 1}
+                    >
+                      魔力に配置
+                    </Button>
+                    <Button
+                      variant="outline-info"
+                      onClick={() =>
+                        handlePlayCard(cardId, 'battlefield')
+                      }
+                      disabled={playerIjinSummonRights < 1}
+                    >
+                      戦場に召喚
+                    </Button>
+                  </div>
+                );
+              })}
+          </ContainerSection>
+          {turn === 'player' && (
+            <Button
+              variant="outline-primary"
+              onClick={handleEndPlayerTurn}
+              className="m-2"
+            >
+              ターン終了
+            </Button>
+          )}
+        </>
+      )}
+      {battleLog.length > 0 && (
+        <div className="m-2">
+          <h3>バトルログ</h3>
+          <ul>
+            {battleLog.map((log) => (
+              <li key={log.id}>{log.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
+  );
+}
 
-  // 2e. リセットボタンを押す
-  await user.click(buttonReset);
+function ContainerSection({ title, cards, guardian = false, children }) {
+  const containerClass = guardian
+    ? 'container-card-line-up container-guardian ms-2'
+    : 'container-card-line-up ms-2';
+  return (
+    <>
+      <h4 className="m-2">{title}</h4>
+      <div className={containerClass}>
+        {cards &&
+          cards.map((element, index) => {
+            const key = `${element}-${index}`;
+            const card = dataCards.get(element);
+            return (
+              <ImageCard key={key} imageUrl={card.imageUrl} alt={card.name} />
+            );
+          })}
+        {children}
+      </div>
+    </>
+  );
+}
 
-  // 2f. 初期状態に戻る
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-
-  // 3a. スタートボタンを押す
-  await user.click(buttonStart);
-
-  // 3b. シミュレータが開始される
-  expect(buttonReset).toBeEnabled();
-  expect(buttonStart).toBeDisabled();
-  expect(buttonMulligan).toBeEnabled();
-  expect(buttonKeep).toBeEnabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-
-  // 3c. キープボタンを押す
-  await user.click(buttonKeep);
-
-  // 3d. シミュレータが終了する
-  expect(buttonReset).toBeEnabled();
-  expect(buttonStart).toBeDisabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-
-  // 3e. リセットボタンを押す
-  await user.click(buttonReset);
-
-  // 3f. 初期状態に戻る
-  expect(buttonReset).toBeDisabled();
-  expect(buttonStart).toBeEnabled();
-  expect(buttonMulligan).toBeDisabled();
-  expect(buttonKeep).toBeDisabled();
-  expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-}, 15000);
+export default TabPaneSimulator;

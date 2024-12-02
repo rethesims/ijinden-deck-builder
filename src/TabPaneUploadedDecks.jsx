@@ -120,7 +120,7 @@ function TabPaneUploadedDecks({
     debounceTimeout.current = setTimeout(() => {
       const filteredSuggestions = cards
         .filter((card) => card.name.includes(value))
-        .slice(0, 10)
+        .slice(0, 50)
         .map((card) => card.name);
 
       setSuggestions(filteredSuggestions);

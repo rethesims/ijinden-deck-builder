@@ -111,9 +111,10 @@ function TabPaneUploadedDecks({
     const { value } = e.target; // 入力値を取得
     setCardKeyword(value); // 状態を更新
 
-    // 入力値に基づいて候補を生成
+    // 最大 10 件の候補だけを表示
     const filteredSuggestions = cards
-      .filter((card) => card.name.includes(value)) // 部分一致
+      .filter((card) => card.name.includes(value))
+      .slice(0, 30) // 上限を設定
       .map((card) => card.name);
 
     setSuggestions(filteredSuggestions); // 候補を更新

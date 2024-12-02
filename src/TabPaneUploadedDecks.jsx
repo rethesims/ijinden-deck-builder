@@ -114,7 +114,12 @@ function TabPaneUploadedDecks({
     const { value } = e.target; // 入力値を取得
     setCardKeyword(value); // 状態を更新
 
-    // 最大 10 件の候補だけを表示
+    // 入力が空の場合、候補をクリア
+    if (!value.trim()) {
+      setSuggestions([]); // 候補リストをクリア
+      return;
+    }
+    
     // デバウンス処理を追加
     clearTimeout(debounceTimeout.current);
     debounceTimeout.current = setTimeout(() => {

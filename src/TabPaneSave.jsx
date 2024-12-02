@@ -100,22 +100,32 @@ function TabPaneSave({
       return;
     }
 
-    const uniqueDecks = [];
+    // デッキを新しい順にする（最新のものが優先される）
+    let uniqueDecks = [];
     const seenCodes = new Set();
 
-    decksSaved.reverse().forEach((deck) => {
-      if (!seenCodes.has(deck.code)) {
-        seenCodes.add(deck.code);
-        uniqueDecks.push(deck);
+    // 配列を逆順にして、新しいものが優先されるようにする
+    for (let i = decksSaved.length - 1; i >= 0; i -= 1) {
+      const deck = decksSaved[i];
+      if (seenCodes.has(deck.code)) {
+        // 古いデッキを削除
+        uniqueDecks = uniqueDecks.filter((d) => d.code !== deck.code);
       }
-    });
+      // 最新のデッキを追加
+      seenCodes.add(deck.code);
+      uniqueDecks.push(deck);
+    }
 
     try {
+      // データベースをクリア
       await db.decks.clear();
+
+      // ユニークデッキを再登録
       const promises = uniqueDecks.map((deck, index) => {
         const newDeck = {
           id: index + 1,
           key: index + 1,
+          name: deck.name,
           code: deck.code,
           timestamp: deck.timestamp,
           main: deck.main,

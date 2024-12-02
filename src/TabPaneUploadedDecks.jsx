@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Button, Spinner, Alert, Form, InputGroup,
 } from 'react-bootstrap';
@@ -107,17 +107,24 @@ function TabPaneUploadedDecks({
     fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
   };
 
+  // useRef でデバウンスタイムアウトを保持
+  const debounceTimeout = useRef(null);
+
   const handleInputChange = (e) => {
     const { value } = e.target; // 入力値を取得
     setCardKeyword(value); // 状態を更新
 
     // 最大 10 件の候補だけを表示
-    const filteredSuggestions = cards
-      .filter((card) => card.name.includes(value))
-      .slice(0, 30) // 上限を設定
-      .map((card) => card.name);
+    // デバウンス処理を追加
+    clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      const filteredSuggestions = cards
+        .filter((card) => card.name.includes(value))
+        .slice(0, 10)
+        .map((card) => card.name);
 
-    setSuggestions(filteredSuggestions); // 候補を更新
+      setSuggestions(filteredSuggestions);
+    }, 300); // 300ms 待機
   };
 
   let content;

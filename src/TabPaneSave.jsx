@@ -284,8 +284,8 @@ function TabPaneSave({
         <Accordion activeKey={activeDeckSaved} onSelect={handleSelectAccordion}>
           {decksSaved.map((aDeckSaved) => {
             const timestamp = DTF.format(new Date(aDeckSaved.timestamp));
-            const code = aDeckSaved.code || 'コードなし';
-            const header = `#${aDeckSaved.id} - コード: ${code} (${timestamp})`;
+            const name = aDeckSaved.name || 'デッキ名なし';
+            const header = `#${aDeckSaved.id} - 名前: ${name} (${timestamp})`;
 
             return (
               <AccordionItem key={aDeckSaved.id} eventKey={aDeckSaved.id}>

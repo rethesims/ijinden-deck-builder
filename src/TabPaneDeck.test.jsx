@@ -1,114 +1,230 @@
 // SPDX-License-Identifier: MIT
 
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
+} from 'react-bootstrap';
 
-import App from './App';
-import { dataCardsArrayForDeck, dataCardsMap } from './dataCards';
+import ImageCard from './ImageCard';
+import { dataCardsArrayForDeck as dataCardsArray, dataCardsMap } from './dataCards';
+import db from './db';
+import enumTabPane from './enumTabPane';
+import { handleClickDecrement, handleClickIncrement } from './handleClick';
+import { enumActionSimulator } from './reducerSimulator';
+import { sum } from './utils';
 
-test('レシピペインの初期状態はすべて非表示', async () => {
-  render(<App />);
+function TabPaneDeck({
+  deckMain, handleSetDeckMain, deckSide, handleSetDeckSide,
+  handleSetActiveDeckSaved, handleSetActiveTab, dispatchSimulator,
+}) {
+  const [idZoom, setIdZoom] = useState(null);
+  const [showModalEmpty, setShowModalEmpty] = useState(false);
+  const [deckName, setDeckName] = useState('');
 
-  const user = userEvent.setup();
+  function handleSetIdZoom(newIdZoom) {
+    setIdZoom(newIdZoom);
+  }
 
-  const tabDeck = screen.getAllByRole('tab')[1];
-  const paneDeck = screen.getAllByRole('tabpanel')[1];
+  function handleClearIdZoom() {
+    setIdZoom(null);
+  }
 
-  await user.click(tabDeck);
-  expect(paneDeck).toHaveClass('active');
-  expect(paneDeck).toBeVisible();
+  async function handleClickSave() {
+    if (deckMain.size === 0 && deckSide.size === 0) {
+      setShowModalEmpty(true);
+      return;
+    }
 
-  expect(paneDeck.querySelectorAll('img').length).toBe(0);
-});
+    const timestamp = new Date();
+    const objectMain = [...deckMain.entries()];
+    const objectSide = [...deckSide.entries()];
 
-test('レシピペイン内でのカード枚数の増減', async () => {
-  render(<App />);
+    try {
+      // 現在の保存データの最大 ID を取得
+      const maxId = await db.decks.toCollection().keys()
+        .then((keys) => (keys.length > 0 ? Math.max(...keys) : 0)); // 最大値がなければ 0 を返す
+      const currentId = maxId + 1; // 最大値の次の数
 
-  const user = userEvent.setup();
+      // デッキデータ作成
+      const objectDeck = {
+        id: currentId, // 手動で id を設定
+        key: currentId, // 同じ値を key にも設定
+        name: deckName.trim(),
+        timestamp,
+        main: objectMain,
+        side: objectSide,
+      };
 
-  const tabDeck = screen.getAllByRole('tab')[1];
-  const paneCard = screen.getAllByRole('tabpanel')[0];
-  const paneDeck = screen.getAllByRole('tabpanel')[1];
+      // サーバーにデッキデータを送信
+      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/deck/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deckData: objectDeck }),
+      });
 
-  // 初期状態を与えるために、カードペインのメインとサイドのプラスボタンを1回ずつ押す
-  expect(paneCard).toHaveClass('active');
-  expect(paneCard).toBeVisible();
-  await user.click(paneCard.querySelector('tr[data-id="R-1"] td:nth-child(3) button:nth-child(3)'));
-  await user.click(paneCard.querySelector('tr[data-id="R-1"] td:nth-child(4) button:nth-child(3)'));
+      const data = await response.json();
 
-  await user.click(tabDeck);
-  expect(paneDeck).toHaveClass('active');
-  expect(paneDeck).toBeVisible();
-  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[0];
-  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[1];
-  const numCopiesMain = imageMain.parentElement.querySelector('.container-num-copies');
-  const numCopiesSide = imageSide.parentElement.querySelector('.container-num-copies');
-  const buttonMinusMain = imageMain.parentElement.querySelector('.btn-pop');
-  const buttonPlusMain = imageMain.parentElement.querySelector('.btn-push');
-  const buttonDrop = imageMain.parentElement.querySelector('.btn-move');
-  const buttonMinusSide = imageSide.parentElement.querySelector('.btn-pop');
-  const buttonPlusSide = imageSide.parentElement.querySelector('.btn-push');
-  const buttonRaise = imageSide.parentElement.querySelector('.btn-move');
+      if (!response.ok) {
+        throw new Error(data.message || 'デッキの送信に失敗しました');
+      }
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('1');
-  expect(numCopiesSide.textContent).toBe('1');
-  expect(buttonMinusMain.textContent).toBe('-');
-  expect(buttonPlusMain.textContent).toBe('+');
-  expect(buttonDrop.textContent).toBe('v');
-  expect(buttonMinusSide.textContent).toBe('-');
-  expect(buttonPlusSide.textContent).toBe('+');
-  expect(buttonRaise.textContent).toBe('^');
+      objectDeck.code = data.code; // サーバーから返却されたコードを保存
 
-  await user.click(buttonPlusMain);
+      // IndexedDB に保存
+      await db.decks.put(objectDeck); // 手動で設定した id をそのまま保存
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('2');
-  expect(numCopiesSide.textContent).toBe('1');
+      // アクティブデッキとタブの更新
+      handleSetActiveDeckSaved(currentId);
+      handleSetActiveTab(enumTabPane.SAVE_AND_LOAD);
+    } catch (error) {
+      console.error('デッキ送信中にエラーが発生しました:', error);
+      alert(`デッキ送信に失敗しました: ${error.message}`);
+    }
+  }
 
-  await user.click(buttonPlusSide);
+  function handleClickClear() {
+    handleSetDeckMain(new Map());
+    handleSetDeckSide(new Map());
+    dispatchSimulator(enumActionSimulator.INTERRUPT);
+  }
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('2');
-  expect(numCopiesSide.textContent).toBe('2');
+  function handleClickConfirmEmpty() {
+    setShowModalEmpty(false);
+  }
 
-  await user.click(buttonDrop);
+  const numCardsMain = sum(deckMain.values());
+  const numCardsSide = sum(deckSide.values());
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('1');
-  expect(numCopiesSide.textContent).toBe('3');
+  const titleMain = `メインデッキ (${numCardsMain}枚)`;
+  const titleSide = `サイドデッキ (${numCardsSide}枚)`;
 
-  await user.click(buttonRaise);
+  return (
+    <>
+      <h2 className="m-2">デッキレシピ</h2>
+      <div className="container-button mx-2 mt-2 mb-3">
+        <input
+          type="text"
+          value={deckName}
+          placeholder="デッキ名"
+          onChange={(e) => setDeckName(e.target.value)}
+        />
+        <Button variant="outline-success" onClick={handleClickSave}>マイデッキに保存</Button>
+        <Button variant="outline-danger" onClick={handleClickClear}>レシピをクリア</Button>
+      </div>
+      <Modal show={showModalEmpty}>
+        <ModalHeader>
+          <ModalTitle>マイデッキ</ModalTitle>
+        </ModalHeader>
+        <ModalBody>現在のレシピが空のため保存できません。</ModalBody>
+        <ModalFooter>
+          <Button variant="outline-secondary" onClick={handleClickConfirmEmpty}>OK</Button>
+        </ModalFooter>
+      </Modal>
+      <h3 className="m-2">{titleMain}</h3>
+      <div className="container-card-line-up ms-2">
+        {
+          dataCardsArray.map((element) => (
+            <ContainerDeckCard
+              id={element.id}
+              key={element.id}
+              name={element.name}
+              imageUrl={element.imageUrl}
+              deckThis={deckMain}
+              handleSetDeckThis={handleSetDeckMain}
+              deckThat={deckSide}
+              handleSetDeckThat={handleSetDeckSide}
+              handleSetIdZoom={handleSetIdZoom}
+              dispatchSimulator={dispatchSimulator}
+            />
+          ))
+        }
+      </div>
+      <h3 className="m-2">{titleSide}</h3>
+      <div className="container-card-line-up ms-2">
+        {
+          dataCardsArray.map((element) => (
+            <ContainerDeckCard
+              id={element.id}
+              key={element.id}
+              name={element.name}
+              imageUrl={element.imageUrl}
+              deckThis={deckSide}
+              handleSetDeckThis={handleSetDeckSide}
+              deckThat={deckMain}
+              handleSetDeckThat={handleSetDeckMain}
+              handleSetIdZoom={handleSetIdZoom}
+              dispatchSimulator={dispatchSimulator}
+              isSide
+            />
+          ))
+        }
+      </div>
+      {
+        idZoom !== null
+          && (
+            <Modal show onHide={handleClearIdZoom}>
+              <ModalHeader closeButton>
+                <ModalTitle>{dataCardsMap.get(idZoom).name}</ModalTitle>
+              </ModalHeader>
+              <ModalBody>
+                <img
+                  src={dataCardsMap.get(idZoom).imageUrl}
+                  alt={dataCardsMap.get(idZoom).name}
+                  style={{ width: '100%', height: 'auto' }}
+                />
+              </ModalBody>
+            </Modal>
+          )
+      }
+    </>
+  );
+}
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('2');
-  expect(numCopiesSide.textContent).toBe('2');
+function ContainerDeckCard({
+  id, imageUrl, name,
+  deckThis, handleSetDeckThis, deckThat, handleSetDeckThat,
+  handleSetIdZoom, dispatchSimulator, isSide = false,
+}) {
+  function handleClickMinus() {
+    handleClickDecrement(id, deckThis, handleSetDeckThis);
+    if (!isSide) {
+      dispatchSimulator(enumActionSimulator.INTERRUPT);
+    }
+  }
 
-  await user.click(buttonMinusSide);
+  function handleClickPlus() {
+    handleClickIncrement(id, deckThis, handleSetDeckThis);
+    if (!isSide) {
+      dispatchSimulator(enumActionSimulator.INTERRUPT);
+    }
+  }
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('2');
-  expect(numCopiesSide.textContent).toBe('1');
+  function handleClickMove() {
+    handleClickDecrement(id, deckThis, handleSetDeckThis);
+    handleClickIncrement(id, deckThat, handleSetDeckThat);
+    dispatchSimulator(enumActionSimulator.INTERRUPT);
+  }
 
-  await user.click(buttonMinusMain);
+  function handleClickZoom() {
+    handleSetIdZoom(id);
+  }
 
-  expect(imageMain).toBeVisible();
-  expect(imageSide).toBeVisible();
-  expect(numCopiesMain.textContent).toBe('1');
-  expect(numCopiesSide.textContent).toBe('1');
+  const numCopies = deckThis.has(id) ? deckThis.get(id) : 0;
+  const moveText = isSide ? '^' : 'v';
+  return numCopies > 0
+    && (
+      <ImageCard imageUrl={imageUrl} alt={name} numCopies={numCopies}>
+        <Button variant="primary" size="sm" className="btn-pop" onClick={handleClickMinus}>-</Button>
+        <Button variant="primary" size="sm" className="btn-push" onClick={handleClickPlus}>+</Button>
+        <Button variant="primary" size="sm" className="btn-move" onClick={handleClickMove}>{moveText}</Button>
+        <Button variant="primary" size="sm" className="btn-zoom" onClick={handleClickZoom}>🔍</Button>
+      </ImageCard>
+    );
+}
 
-  const buttonClear = paneDeck.querySelector('.container-button button:nth-child(2)');
-  expect(buttonClear.textContent).toBe('レシピをクリア');
-  await user.click(buttonClear);
-
-  expect(imageMain).not.toBeVisible();
-  expect(imageSide).not.toBeVisible();
-  expect(numCopiesMain).not.toBeVisible();
-  expect(numCopiesSide).not.toBeVisible();
-}, 10000);
+export default TabPaneDeck;

@@ -24,6 +24,7 @@ function TabPaneDeck({
 }) {
   const [idZoom, setIdZoom] = useState(null);
   const [showModalEmpty, setShowModalEmpty] = useState(false);
+  const [deckName, setDeckName] = useState('');
 
   function handleSetIdZoom(newIdZoom) {
     setIdZoom(newIdZoom);
@@ -53,6 +54,7 @@ function TabPaneDeck({
       const objectDeck = {
         id: currentId, // 手動で id を設定
         key: currentId, // 同じ値を key にも設定
+        name: deckName.trim(),
         timestamp,
         main: objectMain,
         side: objectSide,
@@ -105,6 +107,12 @@ function TabPaneDeck({
     <>
       <h2 className="m-2">デッキレシピ</h2>
       <div className="container-button mx-2 mt-2 mb-3">
+        <input
+          type="text"
+          value={deckName}
+          placeholder="デッキ名"
+          onChange={(e) => setDeckName(e.target.value)}
+        />
         <Button variant="outline-success" onClick={handleClickSave}>マイデッキに保存</Button>
         <Button variant="outline-danger" onClick={handleClickClear}>レシピをクリア</Button>
       </div>

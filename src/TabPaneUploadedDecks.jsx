@@ -176,11 +176,11 @@ function ContainerUploadedDeck({
       <p>
         {deck.description
           ? deck.description.split('\n').map((line) => (
-              <React.Fragment key={line}>
-                {line}
-                <br />
-              </React.Fragment>
-            ))
+            <React.Fragment key={line}>
+              {line}
+              <br />
+            </React.Fragment>
+          ))
           : '説明なし'}
       </p>
       <h4 className="mt-3">キーワード</h4>

@@ -62,6 +62,17 @@ function TabPaneSave({
     handleSetActiveDeckSaved(eventKey);
   }
 
+  function copyToClipboard(text) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert(`デッキID ${text} がクリップボードにコピーされました`);
+      })
+      .catch(() => {
+        alert('コピーに失敗しました。再試行してください。');
+      });
+  }
+
   function handleClickClear() {
     setShowModalClear(true);
   }
@@ -287,6 +298,7 @@ function TabPaneSave({
                     handleSetActiveTab={handleSetActiveTab}
                     dispatchSimulator={dispatchSimulator}
                     handleUploadClick={handleUploadClick} // 追加
+                    copyToClipboard={copyToClipboard} // IDコピー機能を渡す
                   />
                 </AccordionBody>
               </AccordionItem>
@@ -450,6 +462,7 @@ function ContainerDeckSaved({
   handleSetActiveTab,
   dispatchSimulator,
   handleUploadClick, // 追加
+  copyToClipboard, // 追加
 }) {
   function handleClickLoad() {
     handleSetDeckMain(new Map(aDeckSaved.main));
@@ -478,6 +491,9 @@ function ContainerDeckSaved({
         </Button>
         <Button variant="outline-primary" onClick={() => handleUploadClick(aDeckSaved)}>
           アップロード
+        </Button>
+        <Button variant="outline-primary" onClick={() => copyToClipboard(aDeckSaved.code)}>
+          IDコピー
         </Button>
       </div>
       <ContainerDeckSavedPart title="メインデッキ" deckSaved={new Map(aDeckSaved.main)} />

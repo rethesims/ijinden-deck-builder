@@ -173,11 +173,20 @@ function ContainerUploadedDeck({
       <ContainerDeckPart title="メインデッキ" deckSaved={mainDeckMap} />
       <ContainerDeckPart title="サイドデッキ" deckSaved={sideDeckMap} />
       <h4 className="mt-3">説明</h4>
-      <p>{deck.description || '説明なし'}</p>
+      <p>
+        {deck.description
+          ? deck.description.split('\n').map((line) => (
+              <React.Fragment key={line}>
+                {line}
+                <br />
+              </React.Fragment>
+            ))
+          : '説明なし'}
+      </p>
       <h4 className="mt-3">キーワード</h4>
       <ul>
         {(deck.keywords || []).map((keyword) => (
-          <li key={keyword}>{keyword}</li> // keywordをキーに使用
+          <li key={keyword}>{keyword}</li>
         ))}
       </ul>
       <div className="container-button mt-2">

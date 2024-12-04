@@ -47,6 +47,7 @@ const dataTerms = [
   { value: 2, label: '執筆' },
   { value: 3, label: '決起' },
   { value: 4, label: '徴募' },
+  { value: 5, label: 'モータル' },
 ];
 
 function TabPaneCard({

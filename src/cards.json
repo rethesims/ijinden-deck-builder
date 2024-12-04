@@ -315,5 +315,8 @@
 {"id":"4-33","name":"メアリー・ゴドウィン・シェリー","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/33.jpg","expansion":40,"type":2,"color":8,"term":2,"orderTable":314,"orderDeck":506},
 {"id":"4-53","name":"フール","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/53.jpg","expansion":40,"type":3,"color":2,"term":0,"orderTable":315,"orderDeck":507},
 {"id":"4-56","name":"サーベイング","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/56.jpg","expansion":40,"type":3,"color":4,"term":0,"orderTable":316,"orderDeck":508},
-{"id":"4-64","name":"ソリッドビジョンβ","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/64.jpg","expansion":40,"type":3,"color":64,"term":0,"orderTable":317,"orderDeck":509}
+{"id":"4-64","name":"ソリッドビジョンβ","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/64.jpg","expansion":40,"type":3,"color":64,"term":0,"orderTable":317,"orderDeck":509},
+{"id":"4-1","name":"西郷高盛","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/1.jpg","expansion":40,"type":1,"color":1,"term":5,"orderTable":318,"orderDeck":510},
+{"id":"4-13","name":"大久保利通","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/13.jpg","expansion":40,"type":1,"color":1,"term":0,"orderTable":319,"orderDeck":511},
+{"id":"4-41","name":"無礼打","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/41.jpg","expansion":40,"type":2,"color":1,"term":0,"orderTable":320,"orderDeck":512}
 ]

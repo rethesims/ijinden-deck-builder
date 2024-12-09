@@ -337,5 +337,10 @@
 {"id":"4-63","name":"ソリッドビジョンΩ","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/63.jpg","expansion":40,"type":3,"color":64,"term":0,"orderTable":379,"orderDeck":528},
 {"id":"4-65","name":"ソリッドビジョンγ","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/65.jpg","expansion":40,"type":3,"color":64,"term":0,"orderTable":380,"orderDeck":529},
 {"id":"4-67","name":"レッドサークル","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/67.jpg","expansion":40,"type":4,"color":1,"term":0,"orderTable":381,"orderDeck":530},
-{"id":"4-69","name":"ブルーサークル","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/69.jpg","expansion":40,"type":4,"color":2,"term":0,"orderTable":382,"orderDeck":531}
+{"id":"4-69","name":"ブルーサークル","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/69.jpg","expansion":40,"type":4,"color":2,"term":0,"orderTable":382,"orderDeck":531},
+{"id":"4-71","name":"グリーンサークル","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/71.jpg","expansion":40,"type":4,"color":4,"term":0,"orderTable":383,"orderDeck":532},
+{"id":"4-73","name":"イエローサークル","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/73.jpg","expansion":40,"type":4,"color":8,"term":0,"orderTable":384,"orderDeck":533},
+{"id":"4-75","name":"パープルサークル","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/75.jpg","expansion":40,"type":4,"color":16,"term":0,"orderTable":385,"orderDeck":534},
+{"id":"4-76","name":"トランスポーター","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/76.jpg","expansion":40,"type":4,"color":64,"term":0,"orderTable":386,"orderDeck":535},
+{"id":"4-79","name":"ピクシーダスト","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/79.jpg","expansion":40,"type":4,"color":64,"term":0,"orderTable":387,"orderDeck":536}
 ]

@@ -317,6 +317,7 @@
 {"id":"4-28","name":"歌川広重","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/28.jpg","expansion":40,"type":1,"color":4,"term":0,"orderTable":336,"orderDeck":505},
 {"id":"4-33","name":"メアリー・ゴドウィン・シェリー","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/33.jpg","expansion":40,"type":2,"color":8,"term":2,"orderTable":341,"orderDeck":506},
 {"id":"4-35","name":"沖田総司","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/35.jpg","expansion":40,"type":1,"color":16,"term":0,"orderTable":343,"orderDeck":514},
+{"id":"4-39","name":"ヴィルヘルム・コンラート・レントゲン","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/39.jpg","expansion":40,"type":1,"color":16,"term":0,"orderTable":347,"orderDeck":537},
 {"id":"4-41","name":"無礼打","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/41.jpg","expansion":40,"type":2,"color":1,"term":0,"orderTable":349,"orderDeck":512},
 {"id":"4-50","name":"喀血の流行り病","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/50.jpg","expansion":40,"type":2,"color":16,"term":0,"orderTable":358,"orderDeck":515},
 {"id":"4-53","name":"フール","imageUrl":"https://ijin-pub.s3.ap-northeast-1.amazonaws.com/53.jpg","expansion":40,"type":3,"color":2,"term":0,"orderTable":361,"orderDeck":507},

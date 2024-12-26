@@ -19,7 +19,7 @@ const dataExpansions = [
   { value: 25, label: '第２弾ブースター' },
   { value: 30, label: '発展する医療' },
   { value: 35, label: '第３弾ブースター' },
-  { value: 40, label: '第4弾ブースター' },
+  { value: 45, label: '第4弾ブースター' },
 ];
 
 const dataColors = [
@@ -45,9 +45,8 @@ const dataTerms = [
   { value: 0, label: '指定なし' },
   { value: 1, label: '航海' },
   { value: 2, label: '執筆' },
-  { value: 3, label: '決起' },
-  { value: 4, label: '徴募' },
-  { value: 5, label: 'モータル' },
+  { value: 4, label: '決起' },
+  { value: 8, label: '徴募' },
 ];
 
 function TabPaneCard({

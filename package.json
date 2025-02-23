@@ -1,5 +1,5 @@
 {
-  "homepage": "https://bbs.d3549oz7huwdgv.amplifyapp.com/",
+  "homepage": "https://test.d3549oz7huwdgv.amplifyapp.com/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^15.0.6",
@@ -26,7 +26,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "cross-env PUBLIC_URL=https://bbs.d3549oz7huwdgv.amplifyapp.com/ react-scripts build",
+    "build": "cross-env PUBLIC_URL=https://test.d3549oz7huwdgv.amplifyapp.com/ react-scripts build",
     "redocs": "git rm -r docs && move build docs && git add docs && git commit -m \"Build and deploy\"",
     "eslint": "eslint src",
     "test": "react-scripts test",

@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Button, Spinner, Alert, Form, InputGroup,
-} from 'react-bootstrap';
-import cardsJson from './cards.json';
+import { Spinner, Alert } from 'react-bootstrap';
 import { dataCardsArrayForDeck } from './dataCards';
 import ImageCard from './ImageCard';
-import { enumActionSimulator } from './reducerSimulator';
-import enumTabPane from './enumTabPane';
 
 const DTF = new Intl.DateTimeFormat([], {
   year: 'numeric',
@@ -17,107 +12,57 @@ const DTF = new Intl.DateTimeFormat([], {
   second: '2-digit',
 });
 
-const urlBase = 'https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/';
+const API_URL = 'https://bo28t7vh47.execute-api.ap-northeast-1.amazonaws.com/deckslist';
 
-async function fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage) {
+async function fetchDecks(setDecks, setErrorMessage) {
   try {
-    const response = await fetch(
-      searchURL,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(searchData),
-      },
-    );
-
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: 'sample' }),
+    });
     if (!response.ok) {
       const errorData = await response.json();
       if (response.status === 404 || errorData?.body === 'データが見つかりませんでした') {
-        setUploadedDecks([]);
+        setDecks([]);
         setErrorMessage('デッキデータがありませんでした');
       } else {
         throw new Error(`デッキの取得に失敗しました。ステータスコード: ${response.status}`);
       }
     } else {
       const data = await response.json();
+      // API のレスポンス形式に応じて、decks プロパティまたは直接のデータを利用
       const decks = data.decks && data.decks.length > 0 ? data.decks : data;
-      setUploadedDecks(decks);
+      setDecks(decks);
       setErrorMessage('');
     }
   } catch (error) {
-    // ネットワークエラーやその他エラーの場合も特定のメッセージを表示
     setErrorMessage('デッキデータがありませんでした');
-    setUploadedDecks([]);
+    setDecks([]);
   }
 }
 
-function TabPaneUploadedDecks({
-  handleSetDeckMain,
-  handleSetDeckSide,
-  handleSetActiveTab,
-  dispatchSimulator,
-  activeTab,
-}) {
-  const [uploadedDecks, setUploadedDecks] = useState(null);
+function DeckList() {
+  const [decks, setDecks] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [keyword, setKeyword] = useState('親鸞'); // 検索フォームのデフォルト値
-  const [cardKeyword, setCardKeyword] = useState('親鸞'); // カード検索用
-  const [suggestions, setSuggestions] = useState([]); // 予測変換候補
-  const cards = cardsJson; // インポートした cards.json を利用
 
+  // 初回ロード時にフェッチ
   useEffect(() => {
-    if (activeTab === enumTabPane.UPLOADED_DECKS) {
-      // デフォルト検索条件でリセットして検索
-      const searchData = { keyword: 'deck', get_count: 10 }; // デフォルト検索用
-      const searchURL = `${urlBase}decks/search`;
-      setKeyword('親鸞'); // 検索フォームのキーワードもリセット
-      setCardKeyword('親鸞'); // カード検索用もリセット
-      fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
-    } else {
-      setUploadedDecks(null); // タブが変わったらデータをリセット
+    fetchDecks(setDecks, setErrorMessage);
+  }, []);
+
+  // タブがアクティブになったときにフェッチする
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        fetchDecks(setDecks, setErrorMessage);
+      }
     }
-  }, [activeTab]); // activeTabの変更を監視
-
-  const handleSearch = () => {
-    // 前回の結果をリセット
-    setUploadedDecks(null);
-    setErrorMessage('');
-
-    const searchData = { keyword, get_count: 50 };
-    const searchURL = `${urlBase}decks/search`;
-    fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
-  };
-
-  const handleCardSearch = () => {
-    // 前回の結果をリセット
-    setUploadedDecks(null);
-    setErrorMessage('');
-
-    // カード名からIDを取得
-    const selectedCard = cards.find((card) => card.name === cardKeyword);
-    if (!selectedCard) {
-      setErrorMessage('該当するカードが見つかりません');
-      return;
-    }
-
-    // 選択されたカード名から id を取得
-    const searchId = selectedCard ? selectedCard.id : '';
-    const searchData = { keyword: searchId, get_count: 50 };
-    const searchURL = `${urlBase}card/search`;
-    fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
-  };
-
-  const handleInputChange = (e) => {
-    const { value } = e.target; // 入力値を取得
-    setCardKeyword(value); // 状態を更新
-
-    // 入力値に基づいて候補を生成
-    const filteredSuggestions = cards
-      .filter((card) => card.name.includes(value)) // 部分一致
-      .map((card) => card.name);
-
-    setSuggestions(filteredSuggestions); // 候補を更新
-  };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   let content;
 
@@ -127,86 +72,29 @@ function TabPaneUploadedDecks({
         <Alert variant="danger">{errorMessage}</Alert>
       </div>
     );
-  } else if (uploadedDecks === null) {
+  } else if (decks === null) {
     content = (
       <Spinner animation="border" role="status">
         <span className="visually-hidden">読み込み中...</span>
       </Spinner>
     );
-  } else if (uploadedDecks.length === 0) {
+  } else if (decks.length === 0) {
     content = <h2 className="m-2">デッキデータがありませんでした</h2>;
   } else {
     content = (
       <>
         <h2 className="m-2">アップロードされたデッキ</h2>
-        {uploadedDecks.map((deck) => (
-          <ContainerUploadedDeck
-            key={deck.code || deck.id}
-            deck={deck}
-            handleSetDeckMain={handleSetDeckMain}
-            handleSetDeckSide={handleSetDeckSide}
-            handleSetActiveTab={handleSetActiveTab}
-            dispatchSimulator={dispatchSimulator}
-          />
+        {decks.map((deck, index) => (
+          <ContainerUploadedDeck key={deck.code || deck.id || index} deck={deck} />
         ))}
       </>
     );
   }
 
-  return (
-    <div>
-      {/* 検索フォーム */}
-      <div className="m-3">
-        {/* キーワード検索 */}
-        <InputGroup>
-          <Form.Control
-            type="text"
-            value={keyword}
-            placeholder="キーワードを入力"
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-          <Button variant="primary" onClick={handleSearch}>
-            キーワード検索
-          </Button>
-        </InputGroup>
-      </div>
-
-      <div className="m-3">
-        {/* カード検索 */}
-        <InputGroup>
-          <Form.Control
-            id="cardSearchInput"
-            type="text"
-            value={cardKeyword} // 修正後は別の状態を利用
-            placeholder="カード名を入力"
-            onChange={handleInputChange}
-            list="cardSuggestions"
-            aria-label="カード名を入力"
-          />
-          <datalist id="cardSuggestions">
-            {suggestions.map((suggestion) => (
-              <option key={suggestion} value={suggestion} aria-label={suggestion} />
-            ))}
-          </datalist>
-          <Button variant="secondary" onClick={handleCardSearch}>
-            カード検索
-          </Button>
-        </InputGroup>
-      </div>
-
-      {/* コンテンツ */}
-      {content}
-    </div>
-  );
+  return <div>{content}</div>;
 }
 
-function ContainerUploadedDeck({
-  deck,
-  handleSetDeckMain,
-  handleSetDeckSide,
-  handleSetActiveTab,
-  dispatchSimulator,
-}) {
+function ContainerUploadedDeck({ deck }) {
   function convertToMap(deckArray) {
     const deckMap = new Map();
     deckArray.forEach(([id, count]) => {
@@ -215,8 +103,7 @@ function ContainerUploadedDeck({
     return deckMap;
   }
 
-  const mainDeckMap = convertToMap(deck.main || []);
-  const sideDeckMap = convertToMap(deck.side || []);
+  const mainDeckMap = convertToMap(deck.mainDeck || []);
 
   return (
     <div
@@ -229,44 +116,11 @@ function ContainerUploadedDeck({
       }}
     >
       <h3>
-        {deck.name || 'デッキ名なし'}
-        {' '}
-        (
+        {deck.deck_id || 'デッキ名なし'}
+        <br />
         {DTF.format(new Date(deck.timestamp || Date.now()))}
-        )
       </h3>
       <ContainerDeckPart title="メインデッキ" deckSaved={mainDeckMap} />
-      <ContainerDeckPart title="サイドデッキ" deckSaved={sideDeckMap} />
-      <h4 className="mt-3">説明</h4>
-      <p>
-        {deck.description
-          ? deck.description.split('\n').map((line) => (
-            <React.Fragment key={line}>
-              {line}
-              <br />
-            </React.Fragment>
-          ))
-          : '説明なし'}
-      </p>
-      <h4 className="mt-3">キーワード</h4>
-      <ul>
-        {(deck.keywords || []).map((keyword) => (
-          <li key={keyword}>{keyword}</li>
-        ))}
-      </ul>
-      <div className="container-button mt-2">
-        <Button
-          variant="outline-success"
-          onClick={() => {
-            handleSetDeckMain(mainDeckMap);
-            handleSetDeckSide(sideDeckMap);
-            dispatchSimulator(enumActionSimulator.INTERRUPT);
-            handleSetActiveTab(enumTabPane.DECK);
-          }}
-        >
-          読込み
-        </Button>
-      </div>
     </div>
   );
 }
@@ -279,19 +133,21 @@ function ContainerDeckPart({ title, deckSaved }) {
     <>
       <h4 className="mb-1">{titleFull}</h4>
       <div className="overflow-auto mb-1" style={{ minHeight: 60, maxHeight: 300 }}>
-        {dataCardsArrayForDeck.map((card) => (deckSaved.has(card.id) ? (
-          <ImageCard
-            key={card.id}
-            imageUrl={card.imageUrl}
-            alt={card.name}
-            numCopies={deckSaved.get(card.id)}
-            loading="lazy"
-            small
-          />
-        ) : null))}
+        {dataCardsArrayForDeck.map((card) =>
+          deckSaved.has(card.id) ? (
+            <ImageCard
+              key={card.id}
+              imageUrl={card.imageUrl}
+              alt={card.name}
+              numCopies={deckSaved.get(card.id)}
+              loading="lazy"
+              small
+            />
+          ) : null
+        )}
       </div>
     </>
   );
 }
 
-export default TabPaneUploadedDecks;
+export default DeckList;

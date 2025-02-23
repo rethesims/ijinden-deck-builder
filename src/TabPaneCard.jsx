@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
+/* eslint-disable no-bitwise */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button, FormControl, InputGroup, Table, ToggleButton,
 } from 'react-bootstrap';
@@ -19,7 +20,6 @@ const dataExpansions = [
   { value: 25, label: '第２弾ブースター' },
   { value: 30, label: '発展する医療' },
   { value: 35, label: '第３弾ブースター' },
-  { value: 45, label: '第4弾ブースター' },
 ];
 
 const dataColors = [
@@ -45,34 +45,81 @@ const dataTerms = [
   { value: 0, label: '指定なし' },
   { value: 1, label: '航海' },
   { value: 2, label: '執筆' },
-  { value: 4, label: '決起' },
-  { value: 8, label: '徴募' },
+  { value: 3, label: '決起' },
+  { value: 4, label: '徴募' },
 ];
 
+async function updateStockOnServer(groupId, cardId, delta, deckId, deckMain) {
+  try {
+    const objectMain = [...deckMain.entries()];
+    const objectDeck = { main: objectMain };
+    const response = await fetch(
+      'https://bo28t7vh47.execute-api.ap-northeast-1.amazonaws.com/update',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group_id: groupId,
+          id: cardId,
+          value: delta,
+          deck_id: deckId,
+          deck_data: JSON.stringify({ deckData: objectDeck }),
+        }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to update stock: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (data?.value === cardId) {
+      return data;
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
 function TabPaneCard({
-  deckMain, handleSetDeckMain, deckSide, handleSetDeckSide,
+  deckMain,
+  handleSetDeckMain,
   dispatchSimulator,
+  selectedDeckId,
+  selectedGroupId,
 }) {
   const [expansion, setExpansion] = useState(0);
   const [color, setColor] = useState(0);
   const [type, setType] = useState(0);
   const [term, setTerm] = useState(0);
+  const [stockInfo, setStockInfo] = useState({});
 
-  function handleChangeExpansion(e) {
-    setExpansion(Number(e.currentTarget.value));
+  async function fetchStock() {
+    try {
+      const response = await fetch(
+        'https://bo28t7vh47.execute-api.ap-northeast-1.amazonaws.com/stock',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ group_id: 'sample' }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      setStockInfo(data);
+    } catch (err) {
+      // omitted console
+    }
   }
 
-  function handleChangeColor(e) {
-    setColor(Number(e.currentTarget.value));
-  }
-
-  function handleChangeType(e) {
-    setType(Number(e.currentTarget.value));
-  }
-
-  function handleChangeTerm(e) {
-    setTerm(Number(e.currentTarget.value));
-  }
+  useEffect(() => {
+    fetchStock();
+    const intervalId = setInterval(() => {
+      fetchStock();
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <>
@@ -80,28 +127,28 @@ function TabPaneCard({
         title="エキスパンション"
         name="expansion"
         state={expansion}
-        handleChange={handleChangeExpansion}
+        handleChange={(e) => setExpansion(Number(e.currentTarget.value))}
         data={dataExpansions}
       />
       <ContainerFilter
         title="色"
         name="color"
         state={color}
-        handleChange={handleChangeColor}
+        handleChange={(e) => setColor(Number(e.currentTarget.value))}
         data={dataColors}
       />
       <ContainerFilter
         title="種類"
         name="type"
         state={type}
-        handleChange={handleChangeType}
+        handleChange={(e) => setType(Number(e.currentTarget.value))}
         data={dataTypes}
       />
       <ContainerFilter
         title="能力語"
         name="term"
         state={term}
-        handleChange={handleChangeTerm}
+        handleChange={(e) => setTerm(Number(e.currentTarget.value))}
         data={dataTerms}
       />
       <Table hover variant="light">
@@ -109,30 +156,33 @@ function TabPaneCard({
           <tr>
             <th scope="col">ID</th>
             <th scope="col">カード名</th>
+            <th scope="col">残り枚数</th>
             <th scope="col">メイン</th>
-            <th scope="col">サイド</th>
           </tr>
         </thead>
         <tbody>
-          {
-            /* eslint-disable react/jsx-props-no-spreading */
-            dataCards.map((element) => (
-              <TableRowCard
-                {...element}
-                key={element.id}
-                selectedExpansion={expansion}
-                selectedColor={color}
-                selectedType={type}
-                selectedTerm={term}
-                deckMain={deckMain}
-                handleSetDeckMain={handleSetDeckMain}
-                deckSide={deckSide}
-                handleSetDeckSide={handleSetDeckSide}
-                dispatchSimulator={dispatchSimulator}
-              />
-            ))
-            /* eslint-enable react/jsx-props-no-spreading */
-          }
+          {dataCards.map((element) => (
+            <TableRowCard
+              key={element.id}
+              id={element.id}
+              name={element.name}
+              expansion={element.expansion}
+              color={element.color}
+              type={element.type}
+              term={element.term}
+              selectedExpansion={expansion}
+              selectedColor={color}
+              selectedType={type}
+              selectedTerm={term}
+              deckMain={deckMain}
+              handleSetDeckMain={handleSetDeckMain}
+              dispatchSimulator={dispatchSimulator}
+              stockInfo={stockInfo}
+              setStockInfo={setStockInfo}
+              selectedDeckId={selectedDeckId}
+              selectedGroupId={selectedGroupId}
+            />
+          ))}
         </tbody>
       </Table>
     </>
@@ -144,64 +194,57 @@ function ContainerFilter({
 }) {
   return (
     <fieldset className="container-button m-2">
-      <legend className="h3">
-        {title}
-      </legend>
-      {
-        data.map((element) => {
-          const id = `${name}-${element.value}`;
-          return (
-            <ToggleButton
-              key={id}
-              type="radio"
-              variant="outline-primary"
-              id={id}
-              name={name}
-              value={element.value}
-              onChange={handleChange}
-              checked={state === element.value}
-            >
-              {element.label}
-            </ToggleButton>
-          );
-        })
-      }
+      <legend className="h3">{title}</legend>
+      {data.map((element) => {
+        const id = `${name}-${element.value}`;
+        return (
+          <ToggleButton
+            key={id}
+            type="radio"
+            variant="outline-primary"
+            id={id}
+            name={name}
+            value={element.value}
+            onChange={handleChange}
+            checked={state === element.value}
+          >
+            {element.label}
+          </ToggleButton>
+        );
+      })}
     </fieldset>
   );
 }
 
 function TableRowCard({
-  id, name, expansion, color, type, term,
-  selectedExpansion, selectedType, selectedColor, selectedTerm,
-  deckMain, handleSetDeckMain, deckSide, handleSetDeckSide,
+  id,
+  name,
+  expansion,
+  color,
+  type,
+  term,
+  selectedExpansion,
+  selectedColor,
+  selectedType,
+  selectedTerm,
+  deckMain,
+  handleSetDeckMain,
   dispatchSimulator,
+  stockInfo,
+  setStockInfo,
+  selectedDeckId,
+  selectedGroupId,
 }) {
-  /* eslint-disable no-bitwise */
   const show = (selectedExpansion === 0 || expansion === selectedExpansion)
-      && (selectedColor === 0 || (color & selectedColor) === selectedColor)
-      && (selectedType === 0 || type === selectedType)
-      && (selectedTerm === 0 || term === selectedTerm);
-  let colorClass;
-  if (color === 41) {
-    colorClass = 'bg-ijinden-red-yellow';
-  } else if (color === 42) {
-    colorClass = 'bg-ijinden-blue-yellow';
-  } else if (color === 44) {
-    colorClass = 'bg-ijinden-green-yellow';
-  } else if (color === 1) {
-    colorClass = 'bg-ijinden-red';
-  } else if (color === 2) {
-    colorClass = 'bg-ijinden-blue';
-  } else if (color === 4) {
-    colorClass = 'bg-ijinden-green';
-  } else if (color === 8) {
-    colorClass = 'bg-ijinden-yellow';
-  } else if (color === 16) {
-    colorClass = 'bg-ijinden-purple';
-  } else {
-    colorClass = 'bg-ijinden-colorless';
+    && (selectedColor === 0 || (color & selectedColor) === selectedColor)
+    && (selectedType === 0 || type === selectedType)
+    && (selectedTerm === 0 || term === selectedTerm);
+
+  const remainingStock = stockInfo[id] != null ? stockInfo[id] : 4;
+  if (!show) {
+    return null;
   }
-  /* eslint-enable no-bitwise */
+
   return (
     <tr
       data-id={id}
@@ -209,55 +252,91 @@ function TableRowCard({
       data-color={color}
       data-type={type}
       data-term={term}
-      style={{ display: (show ? 'table-row' : 'none') }}
     >
-      <td className={colorClass}>{id}</td>
+      <td>{id}</td>
       <td>{name}</td>
+      <td>{remainingStock}</td>
       <td>
         <FormControlCounter
           id={id}
           deck={deckMain}
           handleSetDeck={handleSetDeckMain}
           dispatchSimulator={dispatchSimulator}
+          remainingStock={remainingStock}
+          stockInfo={stockInfo}
+          setStockInfo={setStockInfo}
+          selectedDeckId={selectedDeckId}
+          selectedGroupId={selectedGroupId}
         />
-      </td>
-      <td>
-        <FormControlCounter id={id} deck={deckSide} handleSetDeck={handleSetDeckSide} />
       </td>
     </tr>
   );
 }
 
 function FormControlCounter({
-  id, deck, handleSetDeck, dispatchSimulator = undefined,
+  id,
+  deck,
+  handleSetDeck,
+  dispatchSimulator,
+  remainingStock,
+  setStockInfo,
+  selectedDeckId,
+  selectedGroupId,
 }) {
-  function handleClickMinus() {
-    handleClickDecrement(id, deck, handleSetDeck);
-    if (dispatchSimulator !== undefined) {
+  async function handleClickPlus() {
+    const newDeck = new Map(deck);
+    const currentCount = newDeck.get(id) ?? 0;
+    newDeck.set(id, currentCount + 1);
+    handleSetDeck(newDeck);
+    if (dispatchSimulator) {
       dispatchSimulator(enumActionSimulator.INTERRUPT);
+    }
+    const result = await updateStockOnServer(selectedGroupId, id, -1, selectedDeckId, newDeck);
+    if (result) {
+      setStockInfo((prev) => ({
+        ...prev,
+        [id]: result.stock,
+      }));
+    } else {
+      handleClickDecrement(id, deck, handleSetDeck);
     }
   }
 
-  function handleClickPlus() {
-    handleClickIncrement(id, deck, handleSetDeck);
-    if (dispatchSimulator !== undefined) {
+  async function handleClickMinus() {
+    const newDeck = new Map(deck);
+    const currentCount = newDeck.get(id) ?? 0;
+    if (currentCount <= 1) {
+      newDeck.delete(id);
+    } else {
+      newDeck.set(id, currentCount - 1);
+    }
+    handleSetDeck(newDeck);
+    if (dispatchSimulator) {
       dispatchSimulator(enumActionSimulator.INTERRUPT);
+    }
+    const result = await updateStockOnServer(selectedGroupId, id, +1, selectedDeckId, newDeck);
+    if (result) {
+      setStockInfo((prev) => ({
+        ...prev,
+        [id]: result.stock,
+      }));
+    } else {
+      handleClickIncrement(id, deck, handleSetDeck);
     }
   }
 
-  const name = (dispatchSimulator !== undefined ? 'main-' : 'side-') + id;
+  const name = `main-${id}`;
   const counter = deck.has(id) ? deck.get(id) : 0;
+
   return (
     <InputGroup>
-      <Button
-        variant="outline-secondary"
-        onClick={handleClickMinus}
-        disabled={counter <= 0}
-      >
+      <Button variant="outline-secondary" onClick={handleClickMinus} disabled={counter <= 0}>
         -
       </Button>
       <FormControl type="number" readOnly name={name} value={counter} />
-      <Button variant="outline-secondary" onClick={handleClickPlus}>+</Button>
+      <Button variant="outline-secondary" onClick={handleClickPlus} disabled={remainingStock <= 0}>
+        +
+      </Button>
     </InputGroup>
   );
 }

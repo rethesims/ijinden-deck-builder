@@ -223,11 +223,14 @@ h2, table, .table-responsive {
     padding: 0;
   }
 
+  /* 1カード1行のときの縮約指定 (width:1%) をここでは打ち消す。
+     残したままだと ID が潰れて途中で切れる。 */
   .table-cards-with-text tbody td:nth-child(1) {
     border-radius: .25rem;
     flex: 0 0 auto;
     order: 0;
     padding: .125rem .375rem;
+    width: auto;
   }
 
   .table-cards-with-text tbody .td-name {
@@ -245,13 +248,16 @@ h2, table, .table-responsive {
     order: 1;
   }
 
+  /* メインとサイドは横に並べる。全幅に伸ばすと - と + が両端まで離れて
+     間延びして見えるため、中身に合わせた幅にとどめる。 */
   .table-cards-with-text tbody td[data-label] {
     align-items: center;
     display: flex;
-    flex: 1 1 100%;
+    flex: 0 1 auto;
     gap: .375rem;
     min-width: 0;
     order: 2;
+    width: auto;
   }
 
   .table-cards-with-text tbody td[data-label]::before {
@@ -262,7 +268,7 @@ h2, table, .table-responsive {
   }
 
   .table-cards-with-text .input-group-counter {
-    width: 100%;
+    width: 5.75rem;
   }
 
   .table-cards-with-text tbody .container-rule-text {

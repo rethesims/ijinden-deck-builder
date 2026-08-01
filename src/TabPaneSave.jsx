@@ -15,8 +15,18 @@ import {
 } from 'react-bootstrap';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from './db';
+import {
+  LENGTH_MAX_DECK_CODE,
+  LENGTH_MAX_DESCRIPTION,
+  LENGTH_MAX_KEYWORD,
+  LENGTH_MAX_NAME,
+  NUM_MAX_KEYWORDS,
+  URL_API_BASE,
+  isValidDeckCode,
+} from './api';
+import { copyText } from './utils';
 
-import { dataCardsArrayForDeck } from './dataCards';
+import { dataCardsArrayForDeck, sanitizeDeckEntries } from './dataCards';
 import ImageCard from './ImageCard';
 import { enumActionSimulator } from './reducerSimulator';
 import enumTabPane from './enumTabPane';
@@ -62,15 +72,13 @@ function TabPaneSave({
     handleSetActiveDeckSaved(eventKey);
   }
 
-  function copyToClipboard(text) {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        alert(`デッキID ${text} がクリップボードにコピーされました`);
-      })
-      .catch(() => {
-        alert('コピーに失敗しました。再試行してください。');
-      });
+  async function copyToClipboard(text) {
+    if (await copyText(text)) {
+      setShowSuccessModal(true);
+    } else {
+      setErrorMessage('コピーに失敗しました。再試行してください。');
+      setShowErrorModal(true);
+    }
   }
 
   function handleClickClear() {
@@ -143,30 +151,38 @@ function TabPaneSave({
   }
 
   async function handleImportDeckByCode(importDeckCode) {
-    if (!importDeckCode) {
+    const code = importDeckCode.trim();
+    if (!code) {
       setErrorMessage('デッキコードが入力されていません');
+      setShowErrorModal(true);
+      return;
+    }
+    // 明らかに形式の違うものはサーバーに投げない。
+    if (!isValidDeckCode(code)) {
+      setErrorMessage('デッキコードの形式が正しくありません');
       setShowErrorModal(true);
       return;
     }
 
     try {
-      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/deck/read', {
+      const response = await fetch(`${URL_API_BASE}deck/read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: importDeckCode }),
+        body: JSON.stringify({ code }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'デッキデータの読み込みに失敗しました');
+        throw new Error('デッキデータの読み込みに失敗しました');
       }
 
       const deckData = data;
 
       const timestamp = new Date(deckData.timestamp || Date.now());
-      const objectMain = deckData.main || [];
-      const objectSide = deckData.side || [];
+      // サーバーからのデータはそのまま信用しない。
+      const objectMain = sanitizeDeckEntries(deckData.main);
+      const objectSide = sanitizeDeckEntries(deckData.side);
       const maxId = await db.decks
         .toCollection()
         .keys()
@@ -207,6 +223,9 @@ function TabPaneSave({
   }
 
   function addKeywordInput() {
+    if (keywords.length >= NUM_MAX_KEYWORDS) {
+      return;
+    }
     setKeywords([...keywords, { id: generateId(), value: '' }]);
   }
 
@@ -223,12 +242,17 @@ function TabPaneSave({
       return;
     }
 
-    const keywordsArray = keywords.map((kw) => kw.value.trim()).filter((kw) => kw);
+    // 送信前に長さを切り詰める。サーバー側の検証の代わりにはならないが、
+    // 事故や嫌がらせで極端に大きいデータが飛ぶのを防ぐ。
+    const keywordsArray = keywords
+      .map((kw) => kw.value.trim().slice(0, LENGTH_MAX_KEYWORD))
+      .filter((kw) => kw)
+      .slice(0, NUM_MAX_KEYWORDS);
 
     const dataToUpload = {
-      name: deckName,
+      name: deckName.trim().slice(0, LENGTH_MAX_NAME),
       keywords: keywordsArray,
-      description: deckDescription,
+      description: deckDescription.slice(0, LENGTH_MAX_DESCRIPTION),
       deckData: {
         main: deckToUpload.main,
         side: deckToUpload.side,
@@ -237,22 +261,20 @@ function TabPaneSave({
     };
 
     try {
-      const response = await fetch('https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/deck/upload', {
+      const response = await fetch(`${URL_API_BASE}deck/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dataToUpload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json(); // サーバーのエラーメッセージを取得
-        const serverErrorMessage = errorData || 'アップロードに失敗しました';
-
-        if (serverErrorMessage.includes('同じデッキが既に存在します')) {
-          setErrorMessage('同じデッキが既に存在します');
-        } else {
-          setErrorMessage(serverErrorMessage);
-        }
-        throw new Error(serverErrorMessage);
+        // サーバーの応答は文字列とは限らないため、そのまま画面に出さない。
+        // 既知の状況 (重複) だけ判別して、それ以外は定型文にする。
+        const errorData = await response.json().catch(() => null);
+        const textServer = typeof errorData === 'string' ? errorData : (errorData?.message ?? '');
+        throw new Error(textServer.includes('同じデッキが既に存在します')
+          ? '同じデッキが既に存在します'
+          : 'アップロードに失敗しました。しばらくしてからお試しください。');
       }
 
       setShowSuccessModal(true);
@@ -375,6 +397,7 @@ function TabPaneSave({
               value={deckCode}
               onChange={(e) => setDeckCode(e.target.value)}
               placeholder="デッキコード"
+              maxLength={LENGTH_MAX_DECK_CODE}
             />
           </Form.Group>
         </ModalBody>
@@ -417,6 +440,7 @@ function TabPaneSave({
               value={deckName}
               onChange={(e) => setDeckName(e.target.value)}
               placeholder="デッキ名を入力"
+              maxLength={LENGTH_MAX_NAME}
             />
           </Form.Group>
           <Form.Group className="mb-3">
@@ -428,6 +452,7 @@ function TabPaneSave({
                   value={keywordObj.value}
                   onChange={(e) => handleKeywordChange(keywordObj.id, e.target.value)}
                   placeholder="キーワードを入力"
+                  maxLength={LENGTH_MAX_KEYWORD}
                 />
                 <Button variant="outline-danger" onClick={() => removeKeywordInput(keywordObj.id)} className="ms-2">
                   -
@@ -448,6 +473,7 @@ function TabPaneSave({
               value={deckDescription}
               onChange={(e) => setDeckDescription(e.target.value)}
               placeholder="デッキの説明を入力"
+              maxLength={LENGTH_MAX_DESCRIPTION}
             />
           </Form.Group>
         </ModalBody>
@@ -524,7 +550,7 @@ function ContainerDeckSavedPart({ title, deckSaved }) {
         {dataCardsArrayForDeck.map((card) => (deckSaved.has(card.id) ? (
           <ImageCard
             key={card.id}
-            imageUrl={card.imageUrl}
+            imageUrl={card.thumbUrl}
             alt={card.name}
             numCopies={deckSaved.get(card.id)}
             loading="lazy"

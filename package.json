@@ -1,5 +1,5 @@
 {
-  "homepage": "https://bbs.d3549oz7huwdgv.amplifyapp.com/",
+  "homepage": "/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^15.0.6",
@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@rushstack/eslint-patch": "^1.16.1",
     "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
     "eslint-config-airbnb": "^19.0.4",
@@ -26,7 +27,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "cross-env PUBLIC_URL=https://bbs.d3549oz7huwdgv.amplifyapp.com/ react-scripts build",
+    "build": "cross-env INLINE_RUNTIME_CHUNK=false react-scripts build",
     "redocs": "git rm -r docs && move build docs && git add docs && git commit -m \"Build and deploy\"",
     "eslint": "eslint src",
     "test": "react-scripts test",

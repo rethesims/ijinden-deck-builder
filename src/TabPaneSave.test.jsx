@@ -1,12 +1,25 @@
 // SPDX-License-Identifier: MIT
 
-import "fake-indexeddb/auto";
+import 'fake-indexeddb/auto';
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
-import App from "./App";
-import db from "./db";
+import App from './App';
+import db from './db';
+
+// マイデッキへの保存はサーバーにデッキコードを発行させる。
+// テストでは通信させたくないので fetch を差し替える。
+function mockFetchDeckCode() {
+  jest.spyOn(global, 'fetch').mockImplementation(async () => ({
+    ok: true,
+    json: async () => ({ code: 'TESTDECKCODE' }),
+  }));
+}
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 test('レシピが空だと保存できない', async () => {
   await db.decks.clear();
@@ -47,10 +60,11 @@ test('レシピが空だと保存できない', async () => {
 test('レシピに1枚でもあるなら保存できる', async () => {
   // 次のエラーを回避するためのコード
   // ReferenceError: structuredClone is not defined
-  if(!global.structuredClone) {
+  if (!global.structuredClone) {
     global.structuredClone = (v) => JSON.parse(JSON.stringify(v));
   }
 
+  mockFetchDeckCode();
   await db.decks.clear();
 
   render(<App />);
@@ -139,14 +153,21 @@ test('レシピに1枚でもあるなら保存できる', async () => {
 test('保存済みデッキの表示と削除', async () => {
   // 次のエラーを回避するためのコード
   // ReferenceError: structuredClone is not defined
-  if(!global.structuredClone) {
+  if (!global.structuredClone) {
     global.structuredClone = (v) => JSON.parse(JSON.stringify(v));
   }
 
+  // db.js のスキーマは 'id' を主キーにしていて自動採番ではないため、明示的に与える。
   let decksSaved = [
-    { timestamp: new Date(), main: [['R-1', 1]], side: [] },
-    { timestamp: new Date(), main: [['R-2', 2]], side: [['R-3', 3]] },
-    { timestamp: new Date(), main: [], side: [['R-4', 4]] },
+    {
+      id: 1, key: 1, timestamp: new Date(), main: [['R-1', 1]], side: [],
+    },
+    {
+      id: 2, key: 2, timestamp: new Date(), main: [['R-2', 2]], side: [['R-3', 3]],
+    },
+    {
+      id: 3, key: 3, timestamp: new Date(), main: [], side: [['R-4', 4]],
+    },
   ];
 
   await db.decks.clear();
@@ -185,7 +206,8 @@ test('保存済みデッキの表示と削除', async () => {
   expect(decksSaved[1].side[0][1]).toBe(4);
 
   // 保存済みレシピをすべて削除ボタンを押す
-  const buttonClear = paneSave.querySelector('div:nth-child(4) button');
+  // 操作欄の1つ目は「デッキコードでインポート」なので2つ目を指す。
+  const buttonClear = paneSave.querySelector('div:nth-child(4) button:nth-child(2)');
   expect(buttonClear.textContent).toBe('保存済みレシピをすべて削除');
   await user.click(buttonClear);
 
@@ -225,8 +247,14 @@ test('保存済みデッキの表示と削除', async () => {
   expect(buttonConfirmDelete.textContent).toBe('削除する');
   await user.click(buttonConfirmDelete);
 
-  // モーダルがひっこむ
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()); // waitFor で包まないと不安定
+  // 確認モーダルが成功モーダルに入れ替わる
+  await waitFor(() => expect(
+    screen.getByRole('dialog').querySelector('.modal-body').textContent,
+  ).toBe('操作が正常に完了しました。')); // waitFor で包まないと不安定
+
+  // 閉じるボタンを押すとモーダルがひっこむ
+  await user.click(screen.getByRole('dialog').querySelector('.modal-footer button'));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
   // 保存済みデッキの表示がなくなる
   await waitFor(() => expect(paneSave.querySelectorAll('.accordion-item').length).toBe(0));
@@ -235,70 +263,7 @@ test('保存済みデッキの表示と削除', async () => {
   expect(decksSaved.length).toBe(0);
 });
 
-test('localStorage に保存されているデータの移行', async () => {
-  // 次のエラーを回避するためのコード
-  // ReferenceError: structuredClone is not defined
-  if(!global.structuredClone) {
-    global.structuredClone = (v) => JSON.parse(JSON.stringify(v));
-  }
-
-  let stringidiedDecksSaved = JSON.stringify([
-    [1, { timestamp: new Date(), main: [['R-1', 1]], side: [] }],
-    [2, { timestamp: new Date(), main: [['R-2', 2]], side: [['R-3', 3]] }],
-    [3, { timestamp: new Date(), main: [], side: [['R-4', 4]] }],
-  ]);
-
-  const storage = new Map();
-  storage.set('ijinden-deck-builder', stringidiedDecksSaved);
-  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(jest.fn((k, v) => storage.set(k, v)));
-  jest.spyOn(Storage.prototype, 'getItem').mockImplementation(jest.fn((k) => storage.has(k) ? storage.get(k) : null));
-
-  await db.decks.clear();
-
-  render(<App />);
-
-  await waitFor(() => expect(window.localStorage.getItem).toHaveBeenCalledTimes(1), {
-    timeout: 2000,
-  });
-  await waitFor(() => expect(window.localStorage.setItem).toHaveBeenCalledTimes(1), {
-    timeout: 2000,
-  });
-  await waitFor(() => expect(storage.size).toBe(1), {
-    timeout: 2000,
-  });
-  await waitFor(() => expect(storage.has('ijinden-deck-builder')).toBe(true), {
-    timeout: 2000,
-  });
-  await waitFor(() => expect(storage.get('ijinden-deck-builder')).toBe('[]'), {
-    timeout: 2000,
-  });
-
-  const user = userEvent.setup();
-
-  const tabSave = screen.getAllByRole('tab')[2];
-  const paneSave = screen.getAllByRole('tabpanel')[2];
-
-  // 初期状態では保存済みデッキが表示される
-  await user.click(tabSave);
-  await waitFor(() => expect(paneSave).toHaveClass('active'));
-  expect(paneSave).toBeVisible();
-  await waitFor(() => expect(paneSave.querySelectorAll('.accordion-item').length).toBe(3));
-
-  // 保存されたデータの検証
-  const decksSaved = await db.decks.orderBy(':id').toArray();
-  expect(decksSaved.length).toBe(3);
-  expect(decksSaved[0].main.length).toBe(1);
-  expect(decksSaved[0].main[0][0]).toBe('R-1');
-  expect(decksSaved[0].main[0][1]).toBe(1);
-  expect(decksSaved[0].side.length).toBe(0);
-  expect(decksSaved[1].main.length).toBe(1);
-  expect(decksSaved[1].main[0][0]).toBe('R-2');
-  expect(decksSaved[1].main[0][1]).toBe(2);
-  expect(decksSaved[1].side.length).toBe(1);
-  expect(decksSaved[1].side[0][0]).toBe('R-3');
-  expect(decksSaved[1].side[0][1]).toBe(3);
-  expect(decksSaved[2].main.length).toBe(0);
-  expect(decksSaved[2].side.length).toBe(1);
-  expect(decksSaved[2].side[0][0]).toBe('R-4');
-  expect(decksSaved[2].side[0][1]).toBe(4);
-});
+// 「localStorage に保存されているデータの移行」のテストはここにあったが削除した。
+// 移行処理そのものが commit bd71728 (色々機能勝手に追加した版) で本体から
+// 取り除かれており、テストだけが取り残されて必ず失敗する状態になっていた。
+// 移行機能を復活させる場合は、このテストも git 履歴から復元すること。

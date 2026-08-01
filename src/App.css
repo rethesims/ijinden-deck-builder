@@ -4,13 +4,188 @@ h2, table, .table-responsive {
   clear: both;
 }
 
-fieldset {
-  float: left;
-}
-
 .container-button label,
 .container-button button[type="button"] {
   margin-right: .25rem;
+  margin-bottom: .25rem;
+}
+
+/* 絞り込みのボタン群は折り返して並べる (スマホで横にはみ出さないように) */
+.container-button {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.container-button legend {
+  flex-basis: 100%;
+}
+
+.container-view-mode {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.container-view-mode label {
+  margin-right: .25rem;
+}
+
+/* タブとツールバーは画面上部に貼り付ける */
+.tabs-main {
+  background-color: var(--bs-body-bg);
+  top: 0;
+  z-index: 3;
+}
+
+/* 狭い画面では見出しを小さくして一覧に画面を使う */
+@media (max-width: 575.98px) {
+  h1.h3 {
+    font-size: 1.1rem;
+    margin-bottom: .25rem !important;
+  }
+
+  .sticky-top-toolbar {
+    top: 2.5rem;
+  }
+}
+
+.sticky-top-toolbar {
+  background-color: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color);
+  position: sticky;
+  top: 3rem;
+  z-index: 2;
+}
+
+/* タップ領域を確保する */
+.input-group-counter {
+  flex-wrap: nowrap;
+  max-width: 11rem;
+  min-width: 8.5rem;
+}
+
+.input-group-counter .btn {
+  min-width: 2.25rem;
+}
+
+.input-group-counter input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  text-align: center;
+}
+
+.input-group-counter input[type="number"]::-webkit-outer-spin-button,
+.input-group-counter input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.label-counter {
+  min-width: 3.5rem;
+}
+
+/* カード一覧: カード画像表示 */
+.container-card-grid {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+}
+
+.container-card-grid-cell {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+
+.container-card-grid-cell .container-card {
+  float: none;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 一覧の画像はセル幅いっぱいに伸ばす (縦横比はサムネイルのまま) */
+.container-card-grid-cell .img-card {
+  height: auto;
+  width: 100%;
+}
+
+.container-card-grid-name {
+  line-height: 1.2;
+  min-height: 2.4em;
+  text-align: center;
+}
+
+/* カード一覧: カード名表示 */
+.table-cards td {
+  vertical-align: middle;
+}
+
+/* カード名が1文字ずつ折り返されないよう最低幅を確保する */
+.table-cards .td-name {
+  min-width: 8rem;
+}
+
+.container-rule-text {
+  line-height: 1.35;
+  margin-top: .25rem;
+}
+
+/* 狭い画面では表を1行1カードのブロックに組み替える。
+   横に4列並べるとカード名の欄が1文字ずつ折り返されて読めなくなるため。 */
+@media (max-width: 575.98px) {
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards tbody tr {
+    align-items: center;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem .5rem;
+    padding: .5rem .25rem;
+  }
+
+  .table-cards tbody td {
+    border: 0;
+    padding: 0;
+  }
+
+  /* ID (色見本を兼ねる) */
+  .table-cards tbody td:nth-child(1) {
+    border-radius: .25rem;
+    flex: 0 0 auto;
+    padding: .125rem .375rem;
+  }
+
+  .table-cards tbody .td-name {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  /* メイン・サイドのカウンタは2つで1行を分け合う */
+  .table-cards tbody td[data-label] {
+    align-items: center;
+    display: flex;
+    flex: 1 1 9.5rem;
+    gap: .375rem;
+  }
+
+  .table-cards tbody td[data-label]::before {
+    color: var(--bs-secondary-color);
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: .8125rem;
+  }
+
+  .table-cards tbody td[data-label] .input-group-counter {
+    min-width: 0;
+  }
+
+  /* 効果テキストはカード名の下に全幅で置く */
+  .table-cards tbody .container-rule-text {
+    flex-basis: 100%;
+  }
 }
 
 .container-card-line-up {
@@ -120,7 +295,29 @@ fieldset {
 
 /* タブリンクの横幅を狭くして画面幅に収めることを試みる */
 .nav-tabs .nav-link {
-  padding: var(--bs-nav-link-padding-y) calc(.5 * var(--bs-nav-link-padding-x))
+  padding: var(--bs-nav-link-padding-y) calc(.5 * var(--bs-nav-link-padding-x));
+  white-space: nowrap;
+}
+
+/* タッチ端末には hover がないため、レシピのカード操作ボタンを常に表示する。
+   hover 前提のままだと、スマホではカードの増減や入れ替えができない。 */
+@media (hover: none) {
+  .btn-pop,
+  .btn-push,
+  .btn-move,
+  .btn-zoom {
+    display: initial;
+  }
+
+  .container-guardian .container-card .img-card {
+    visibility: visible;
+  }
+
+  /* 常時表示になるボタンが画像を覆い隠さないよう、レシピのカードを大きめにする */
+  .card-medium .img-card {
+    width: 100px;
+    height: 140px;
+  }
 }
 
 /* 画面下端に空間を作る */
@@ -199,4 +396,46 @@ fieldset {
   --bs-table-color-state: initial;
   --bs-table-bg-state: initial;
   background: linear-gradient(to bottom right, #479f76 50%, #ffcd39 50%);
+}
+
+/* 第5弾以降で増えた多色の組み合わせ */
+.table > :not(caption) > * > .bg-ijinden-red-green {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #f1aeb5 50%, #a3cfbb 50%);
+}
+.table-hover > tbody > tr:hover > .bg-ijinden-red-green {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #e35d6a 50%, #479f76 50%);
+}
+.table > :not(caption) > * > .bg-ijinden-blue-green {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #9ec5fe 50%, #a3cfbb 50%);
+}
+.table-hover > tbody > tr:hover > .bg-ijinden-blue-green {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #3d8bfd 50%, #479f76 50%);
+}
+.table > :not(caption) > * > .bg-ijinden-blue-purple {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #9ec5fe 50%, #c5b3e6 50%);
+}
+.table-hover > tbody > tr:hover > .bg-ijinden-blue-purple {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #3d8bfd 50%, #8c68cd 50%);
+}
+.table > :not(caption) > * > .bg-ijinden-yellow-purple {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #ffe69c 50%, #c5b3e6 50%);
+}
+.table-hover > tbody > tr:hover > .bg-ijinden-yellow-purple {
+  --bs-table-color-state: initial;
+  --bs-table-bg-state: initial;
+  background: linear-gradient(to bottom right, #ffcd39 50%, #8c68cd 50%);
 }

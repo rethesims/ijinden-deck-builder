@@ -8,8 +8,13 @@
     <meta name="description" content="イジンデンのデッキレシピを作成するアプリです。" />
     <meta property="og:title" content="イジンデン デッキ作成_デッキ共有版" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="%PUBLIC_URL%/" />
-    <meta property="og:image" content="%PUBLIC_URL%/icon-512.png" />
+    <!--
+      OGP は絶対 URL でなければならないため、本番の URL を直接書く。
+      アセットの参照は %PUBLIC_URL% (= ルート相対) にしてあるので、
+      dev 環境やローカルでも同じビルドがそのまま動く。
+    -->
+    <meta property="og:url" content="https://bbs.d3549oz7huwdgv.amplifyapp.com/" />
+    <meta property="og:image" content="https://bbs.d3549oz7huwdgv.amplifyapp.com/icon-512.png" />
     <meta property="og:description" content="イジンデンのデッキレシピを作成するアプリです。" />
     <meta property="og:site_name" content="イジンデン デッキ作成_デッキ共有版" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />

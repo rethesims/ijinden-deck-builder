@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+// カード画像は自前ホストの WebP サムネイル (public/images/<id>.webp, 幅250px) を使う。
+// 公式サイトの PNG は1枚あたり数百KB あり Cache-Control も付かないため、一覧表示に
+// 使うと通信量が跳ね上がる。原寸の公式画像は拡大表示のときだけ読み込む。
 function ImageCard({
   imageUrl, alt, numCopies, loading = 'auto', small = false, children,
 }) {
@@ -10,7 +13,15 @@ function ImageCard({
     : 'container-card card-medium';
   return (
     <div className={containerClass}>
-      <img className="img-card" width={width} height={height} src={imageUrl} alt={alt} loading={loading} />
+      <img
+        className="img-card"
+        width={width}
+        height={height}
+        src={imageUrl}
+        alt={alt}
+        loading={loading}
+        decoding="async"
+      />
       {
         numCopies !== undefined
           && <span className="container-num-copies">{numCopies}</span>

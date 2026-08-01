@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 
-import "fake-indexeddb/auto";
+import 'fake-indexeddb/auto';
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from './App';
 import { dataCardsMap } from './dataCards';
-import db from "./db";
+import db from './db';
 
-test("タブをクリックするとペインが表示される", async () => {
+test('タブをクリックするとペインが表示される', async () => {
   render(<App />);
 
   const user = userEvent.setup();
@@ -17,9 +17,9 @@ test("タブをクリックするとペインが表示される", async () => {
   const tabs = screen.getAllByRole('tab');
   const panes = screen.getAllByRole('tabpanel');
 
-  // タブの数は5個
-  expect(tabs.length).toBe(5);
-  expect(panes.length).toBe(5);
+  // タブの数は6個 (カード・レシピ・マイデッキ・シミュ・デッキ掲示板・ヘルプ)
+  expect(tabs.length).toBe(6);
+  expect(panes.length).toBe(6);
 
   // 初期タブは0番
   expect(screen.queryByRole('tab', { selected: true })).toBe(tabs[0]);
@@ -28,6 +28,7 @@ test("タブをクリックするとペインが表示される", async () => {
   expect(tabs[2]).not.toHaveClass('active');
   expect(tabs[3]).not.toHaveClass('active');
   expect(tabs[4]).not.toHaveClass('active');
+  expect(tabs[5]).not.toHaveClass('active');
 
   // 次のアサーションは成功するが、ほぼ意味がない。
   expect(panes[0]).toBeVisible();
@@ -47,6 +48,7 @@ test("タブをクリックするとペインが表示される", async () => {
   expect(tabs[2]).not.toHaveClass('active');
   expect(tabs[3]).not.toHaveClass('active');
   expect(tabs[4]).not.toHaveClass('active');
+  expect(tabs[5]).not.toHaveClass('active');
 
   await user.click(tabs[2]);
   expect(screen.queryByRole('tab', { selected: true })).toBe(tabs[2]);
@@ -55,6 +57,7 @@ test("タブをクリックするとペインが表示される", async () => {
   expect(tabs[2]).toHaveClass('active');
   expect(tabs[3]).not.toHaveClass('active');
   expect(tabs[4]).not.toHaveClass('active');
+  expect(tabs[5]).not.toHaveClass('active');
 
   await user.click(tabs[3]);
   expect(screen.queryByRole('tab', { selected: true })).toBe(tabs[3]);
@@ -104,7 +107,7 @@ test('カードペインからレシピペインへの作用', async () => {
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
 
-  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`).length).toBe(0);
+  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`).length).toBe(0);
 
   // 1a. カードペインでメインのプラスボタンを押す
   await user.click(tabCard);
@@ -116,7 +119,7 @@ test('カードペインからレシピペインへの作用', async () => {
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[0];
+  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
   expect(imageMain).toBeVisible();
   const numCopiesMain = imageMain.parentElement.querySelector('.container-num-copies');
   expect(numCopiesMain).toBeVisible();
@@ -132,7 +135,7 @@ test('カードペインからレシピペインへの作用', async () => {
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[1];
+  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[1];
   expect(imageSide).toBeVisible();
   const numCopiesSide = imageMain.parentElement.querySelector('.container-num-copies');
   expect(numCopiesSide).toBeVisible();
@@ -175,7 +178,7 @@ test('カードペインからレシピペインへの作用', async () => {
   // 5b. レシピペインのメインデッキで当該カードの枚数が減る
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
-  expect(paneDeck).toBeVisible();  
+  expect(paneDeck).toBeVisible();
   expect(imageMain).toBeVisible();
   expect(numCopiesMain).toBeVisible();
   expect(numCopiesMain.textContent).toBe('1');
@@ -248,7 +251,7 @@ test('レシピペインからカードペインへの作用', async () => {
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
 
-  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`).length).toBe(0);
+  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`).length).toBe(0);
 
   // 初期状態として、カードペインでメインとサイドのプラスボタンを押す
   await user.click(tabCard);
@@ -261,12 +264,12 @@ test('レシピペインからカードペインへの作用', async () => {
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[0];
+  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
   expect(imageMain).toBeVisible();
   const numCopiesMain = imageMain.parentElement.querySelector('.container-num-copies');
   expect(numCopiesMain).toBeVisible();
   expect(numCopiesMain.textContent).toBe('1');
-  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[1];
+  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[1];
   expect(imageSide).toBeVisible();
   const numCopiesSide = imageSide.parentElement.querySelector('.container-num-copies');
   expect(numCopiesSide).toBeVisible();
@@ -364,10 +367,11 @@ test('レシピペインからカードペインへの作用', async () => {
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const buttonClear = paneDeck.querySelector('.container-button button:nth-child(2)');
+  // 1つ目の子はデッキ名の入力欄、2つ目が「マイデッキに保存」なので3つ目を指す。
+  const buttonClear = paneDeck.querySelector('.container-button button:nth-child(3)');
   expect(buttonClear.textContent).toBe('レシピをクリア');
   await user.click(buttonClear);
-  
+
   // 7b. カードペインで当該カードの枚数がゼロになる
   await user.click(tabCard);
   expect(paneCard).toHaveClass('active');
@@ -379,12 +383,15 @@ test('レシピペインからカードペインへの作用', async () => {
 test('保存したデッキを読み込んでレシピペインに表示する', async () => {
   // 次のエラーを回避するためのコード
   // ReferenceError: structuredClone is not defined
-  if(!global.structuredClone) {
+  if (!global.structuredClone) {
     global.structuredClone = (v) => JSON.parse(JSON.stringify(v));
   }
 
+  // db.js のスキーマは主キー 'id' が自動採番ではないため、明示的に与える。
   const decksSaved = [
-    { timestamp: new Date(), main: [['R-1', 3]], side: [['R-2', 4]] }
+    {
+      id: 1, key: 1, timestamp: new Date(), main: [['R-1', 3]], side: [['R-2', 4]],
+    },
   ];
 
   await db.decks.clear();
@@ -405,8 +412,8 @@ test('保存したデッキを読み込んでレシピペインに表示する',
   expect(paneDeck).toBeVisible();
 
   // 初期状態でカードは非表示
-  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`).length).toBe(0);
-  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-2').imageUrl}"]`).length).toBe(0);
+  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`).length).toBe(0);
+  expect(paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-2').thumbUrl}"]`).length).toBe(0);
 
   // マイデッキタブをクリックしてアコーディオンを開き、読込みボタンを押す
   await user.click(tabSave);
@@ -420,9 +427,9 @@ test('保存したデッキを読み込んでレシピペインに表示する',
   // レシピタブに遷移し、読み込まれたデッキのカードが表示された
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const imageAlphaMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[0];
+  const imageAlphaMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
   expect(imageAlphaMain).toBeVisible();
-  const imageBravoSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-2').imageUrl}"]`)[0];
+  const imageBravoSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-2').thumbUrl}"]`)[0];
   expect(imageBravoSide).toBeVisible();
   const numCopiesAlphaMain = imageAlphaMain.parentElement.querySelector('.container-num-copies');
   expect(numCopiesAlphaMain.textContent).toBe('3');
@@ -445,10 +452,10 @@ test('シミュレータがカードペインの操作でアボートする', as
   expect(paneCard).toHaveClass('active');
   expect(paneCard).toBeVisible();
 
-  let buttonMinusMain = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(3) button:nth-child(1)');
-  let buttonPlusMain = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(3) button:nth-child(3)');
-  let buttonMinusSide = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(4) button:nth-child(1)');
-  let buttonPlusSide = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(4) button:nth-child(3)');
+  const buttonMinusMain = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(3) button:nth-child(1)');
+  const buttonPlusMain = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(3) button:nth-child(3)');
+  const buttonMinusSide = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(4) button:nth-child(1)');
+  const buttonPlusSide = paneCard.querySelector('tr[data-id="R-1"] td:nth-child(4) button:nth-child(3)');
   expect(buttonMinusMain.textContent).toBe('-');
   expect(buttonPlusMain.textContent).toBe('+');
   expect(buttonMinusSide.textContent).toBe('-');
@@ -508,7 +515,7 @@ test('シミュレータがカードペインの操作でアボートする', as
   expect(paneCard).toBeVisible();
   await user.click(buttonPlusMain);
 
-  //1c. 手札シミュレータがアボートする
+  // 1c. 手札シミュレータがアボートする
   await user.click(tabSimulator);
   expect(paneSimulator).toHaveClass('active');
   expect(paneSimulator).toBeVisible();
@@ -571,7 +578,7 @@ test('シミュレータがカードペインの操作でアボートする', as
   expect(buttonMulligan).toBeEnabled();
   expect(buttonKeep).toBeEnabled();
   expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-  
+
   // 4a. カードペインでサイドデッキのマイナスボタンを押す
   await user.click(tabCard);
   expect(tabCard).toHaveClass('active');
@@ -653,8 +660,8 @@ test('シミュレータがレシピペインの操作でアボートする', as
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[0];
-  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').imageUrl}"]`)[1];
+  const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
+  const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[1];
   buttonPlusMain = imageMain.parentElement.querySelector('.btn-push');
   buttonPlusSide = imageSide.parentElement.querySelector('.btn-push');
   const buttonMinusMain = imageMain.parentElement.querySelector('.btn-pop');
@@ -786,7 +793,7 @@ test('シミュレータがレシピペインの操作でアボートする', as
   expect(buttonMulligan).toBeEnabled();
   expect(buttonKeep).toBeEnabled();
   expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-  
+
   // 5b. レシピペインでサイドデッキのプラスボタンを押す
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
@@ -802,13 +809,13 @@ test('シミュレータがレシピペインの操作でアボートする', as
   expect(buttonMulligan).toBeEnabled();
   expect(buttonKeep).toBeEnabled();
   expect(paneSimulator.querySelectorAll('.alert-warning').length).toBe(0);
-    
+
   // 6a. レシピペインでサイドデッキのマイナスボタンを押す
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
   await user.click(buttonMinusSide);
-  
+
   // 6b. やはりシミュレータはアボートしない
   await user.click(tabSimulator);
   expect(paneSimulator).toHaveClass('active');
@@ -823,7 +830,8 @@ test('シミュレータがレシピペインの操作でアボートする', as
   await user.click(tabDeck);
   expect(paneDeck).toHaveClass('active');
   expect(paneDeck).toBeVisible();
-  const buttonClear = paneDeck.querySelector('.container-button button:nth-child(2)');
+  // 1つ目の子はデッキ名の入力欄、2つ目が「マイデッキに保存」なので3つ目を指す。
+  const buttonClear = paneDeck.querySelector('.container-button button:nth-child(3)');
   expect(buttonClear.textContent).toBe('レシピをクリア');
   await user.click(buttonClear);
 
@@ -843,12 +851,15 @@ test('シミュレータがレシピペインの操作でアボートする', as
 test('シミュレータがマイデッキペインの操作でアボートする', async () => {
   // 次のエラーを回避するためのコード
   // ReferenceError: structuredClone is not defined
-  if(!global.structuredClone) {
+  if (!global.structuredClone) {
     global.structuredClone = (v) => JSON.parse(JSON.stringify(v));
   }
 
+  // db.js のスキーマは主キー 'id' が自動採番ではないため、明示的に与える。
   const decksSaved = [
-    { timestamp: new Date(), main: [['R-1', 10]], side: [] }
+    {
+      id: 1, key: 1, timestamp: new Date(), main: [['R-1', 10]], side: [],
+    },
   ];
 
   await db.decks.clear();

@@ -11,7 +11,7 @@
 
 Amplify でアプリを公開しています。公開ページは次の URL です。
 
-https://test.d3549oz7huwdgv.amplifyapp.com/
+https://bbs.d3549oz7huwdgv.amplifyapp.com/
 
 
 ## 特徴
@@ -20,14 +20,81 @@ https://test.d3549oz7huwdgv.amplifyapp.com/
 - メインデッキとサイドデッキを別個に管理可能
 - レシピを「マイデッキ」としてブラウザに保存可能
 - カード枚数はカード名ごとに数字で表示
+- カード一覧は「カード名」表示と「カード画像」表示を切り替え可能
+  (カード名表示のときは効果テキストの表示を on/off 可能。設定はブラウザに保存される)
+- カード名・効果テキスト・イラストレーター名での検索
 - 並びは種類、レベル、色、エキスパンション順
+- 元サイトと互換の共有リンク
 
 ## 未対応機能
 
 - **自前の画像保存** -- OS のスクショ機能で保存願います。
-- **高度な検索** -- お手数ですがカードリストから探してください。
 - **並び順の変更** -- ご面倒ですがこのまま使用ください。
-- **PSR カード** -- 対応する SR のカードを使用ください。
+
+## 共有リンクについて
+
+レシピタブでレシピの中身をそのまま埋め込んだリンクを作れます。
+サーバーには何も保存されません。
+
+    https://bbs.d3549oz7huwdgv.amplifyapp.com/#/deck/<コード>
+
+コードの形式は元サイト (すいーとポテト様版) と同じで、
+どちらのサイトで作ったリンクも相互に読み込めます。
+仕様は `src/deckCode.js` のコメントを参照してください。
+
+**コードはカードの `orderTable` を鍵にしています。**
+`src/cards.json` を更新するときに `orderTable` を振り直すと、
+過去に発行された共有リンクがすべて別のデッキを指してしまいます。
+元サイトの値をそのまま使ってください。
+
+## カード画像
+
+カード一覧・レシピの表示には、`public/images/` に置いた WebP サムネイル
+(幅250px) を使っています。公式サイトの画像は1枚あたり数百KB あり
+`Cache-Control` も付かないため、直接読むとスマホでかなり重くなるためです。
+原寸の公式画像は、レシピの拡大表示のときだけ読み込みます。
+
+ファイル名には内容のハッシュが入っているので、
+`customHttp.yml` で1年間の immutable キャッシュを付けています。
+
+## 開発
+
+```sh
+npm install
+npm start          # 開発サーバー
+npm test           # テスト
+npm run eslint     # 静的検査
+npm run build      # 本番ビルド
+```
+
+### カードデータの更新
+
+新しい弾が出たときは、次の手順で更新します。
+
+1. `src/cards.json` を更新する (元サイトのデータに合わせる。`orderTable` は変えない)
+2. サムネイルを作り直す
+
+```sh
+pip install pillow
+python3 scripts/make-thumbnails.py
+```
+
+`scripts/make-thumbnails.py` は公式サイトから画像を取得して WebP に変換し、
+`public/images/` を作り直したうえで `src/cards.json` の `thumbUrl` を書き換えます。
+
+### デプロイ
+
+`bbs` ブランチへの push が本番に反映されます。
+配信ヘッダー (キャッシュ・CSP など) は `customHttp.yml` で設定しています。
+ヘッダーを変えたときは、デプロイ後に実際の応答を確認してください。
+
+```sh
+curl -sSI https://bbs.d3549oz7huwdgv.amplifyapp.com/ | grep -i content-security-policy
+```
+
+`connect-src` は API のオリジンだけを許可しています。
+API の URL を変えるときは `src/api.js` と `customHttp.yml` の両方を直してください。
 
 ## 連絡先
 
+ムヨン &lt;rethesims AT yahoo DOT co DOT jp&gt;

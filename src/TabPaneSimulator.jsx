@@ -198,7 +198,7 @@ function ContainerSection({ title, cards, guardian = false }) {
             const key = `${element}-${index}`;
             const card = dataCards.get(element);
             return (
-              <ImageCard key={key} imageUrl={card.imageUrl} alt={card.name} />
+              <ImageCard key={key} imageUrl={card.thumbUrl} alt={card.displayName} />
             );
           })
         }

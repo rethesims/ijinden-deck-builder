@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: MIT
+#
+# Amplify Hosting のカスタムヘッダー設定。
+# Amplify の配信はもともと CloudFront を通っているので、
+# ここでキャッシュとセキュリティのヘッダーを付ければ CDN がそのまま従う。
+# 反映はビルド後のデプロイ時。ドメインや URL は変わらない。
+#
+# https://docs.aws.amazon.com/amplify/latest/userguide/custom-headers.html
+
+customHeaders:
+  # すべての応答に付けるセキュリティヘッダー
+  - pattern: '**'
+    headers:
+      # HTTPS を強制する。amplifyapp.com は既に HTTPS のみだが、明示しておく。
+      - key: Strict-Transport-Security
+        value: 'max-age=63072000; includeSubDomains'
+      # Content-Type の推測を止める (仕込まれたファイルをスクリプト扱いさせない)
+      - key: X-Content-Type-Options
+        value: nosniff
+      # クリックジャッキング対策。CSP の frame-ancestors と合わせる。
+      - key: X-Frame-Options
+        value: DENY
+      # 外部サイトに送るリファラを最小限にする
+      - key: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      # 使っていないブラウザ機能を明示的に切る
+      - key: Permissions-Policy
+        value: 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+      # Content-Security-Policy
+      #   script-src  'self' のみ。CRA のランタイムチャンクは
+      #               INLINE_RUNTIME_CHUNK=false で外出しにしてあるため
+      #               'unsafe-inline' は不要 (package.json の build を参照)。
+      #   style-src   react-bootstrap がモーダルなどで style 属性を使うため
+      #               'unsafe-inline' が必要。
+      #   img-src     自前のサムネイル (self) と、拡大表示に使う公式画像。
+      #   connect-src デッキコード・掲示板の API のみ。
+      - key: Content-Security-Policy
+        value: >-
+          default-src 'self';
+          script-src 'self';
+          style-src 'self' 'unsafe-inline';
+          img-src 'self' data: https://one-draw.jp;
+          font-src 'self' data:;
+          connect-src 'self' https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com;
+          object-src 'none';
+          base-uri 'self';
+          form-action 'self';
+          frame-ancestors 'none';
+          upgrade-insecure-requests
+
+  # ファイル名にハッシュが入っているものは、内容が変われば URL も変わる。
+  # 1年間 immutable にしてよい。
+  - pattern: '/static/**'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=31536000, immutable'
+
+  # カード画像も内容ハッシュ付き (scripts/make-thumbnails.py)。
+  - pattern: '/images/**'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=31536000, immutable'
+
+  # index.html はキャッシュさせない。ここが古いと新しい静的ファイルを指せない。
+  - pattern: '/index.html'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=0, must-revalidate'
+
+  - pattern: '/manifest.json'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=3600'
+
+  # アイコン類はファイル名が固定なので、ほどほどの期間にとどめる。
+  - pattern: '/*.png'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=604800'
+
+  - pattern: '/favicon.ico'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=604800'

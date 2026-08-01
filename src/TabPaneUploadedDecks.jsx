@@ -3,7 +3,8 @@ import {
   Button, Spinner, Alert, Form, InputGroup,
 } from 'react-bootstrap';
 import cardsJson from './cards.json';
-import { dataCardsArrayForDeck } from './dataCards';
+import { LENGTH_MAX_SEARCH, URL_API_BASE } from './api';
+import { dataCardsArrayForDeck, sanitizeDeckEntries } from './dataCards';
 import ImageCard from './ImageCard';
 import { enumActionSimulator } from './reducerSimulator';
 import enumTabPane from './enumTabPane';
@@ -16,8 +17,6 @@ const DTF = new Intl.DateTimeFormat([], {
   minute: '2-digit',
   second: '2-digit',
 });
-
-const urlBase = 'https://23axhh57na.execute-api.ap-northeast-1.amazonaws.com/v2/';
 
 async function fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage) {
   try {
@@ -69,7 +68,7 @@ function TabPaneUploadedDecks({
     if (activeTab === enumTabPane.UPLOADED_DECKS) {
       // デフォルト検索条件でリセットして検索
       const searchData = { keyword: 'deck', get_count: 10 }; // デフォルト検索用
-      const searchURL = `${urlBase}decks/search`;
+      const searchURL = `${URL_API_BASE}decks/search`;
       setKeyword('親鸞'); // 検索フォームのキーワードもリセット
       setCardKeyword('親鸞'); // カード検索用もリセット
       fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
@@ -83,8 +82,8 @@ function TabPaneUploadedDecks({
     setUploadedDecks(null);
     setErrorMessage('');
 
-    const searchData = { keyword, get_count: 50 };
-    const searchURL = `${urlBase}decks/search`;
+    const searchData = { keyword: keyword.trim().slice(0, LENGTH_MAX_SEARCH), get_count: 50 };
+    const searchURL = `${URL_API_BASE}decks/search`;
     fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
   };
 
@@ -103,7 +102,7 @@ function TabPaneUploadedDecks({
     // 選択されたカード名から id を取得
     const searchId = selectedCard ? selectedCard.id : '';
     const searchData = { keyword: searchId, get_count: 50 };
-    const searchURL = `${urlBase}card/search`;
+    const searchURL = `${URL_API_BASE}card/search`;
     fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setErrorMessage);
   };
 
@@ -176,6 +175,7 @@ function TabPaneUploadedDecks({
             value={keyword}
             placeholder="キーワードを入力"
             onChange={(e) => setKeyword(e.target.value)}
+            maxLength={LENGTH_MAX_SEARCH}
           />
           <Button variant="primary" onClick={handleSearch}>
             キーワード検索
@@ -192,6 +192,7 @@ function TabPaneUploadedDecks({
             value={cardKeyword} // 修正後は別の状態を利用
             placeholder="カード名を入力"
             onChange={handleInputChange}
+            maxLength={LENGTH_MAX_SEARCH}
             list="cardSuggestions"
             aria-label="カード名を入力"
           />
@@ -219,16 +220,9 @@ function ContainerUploadedDeck({
   handleSetActiveTab,
   dispatchSimulator,
 }) {
-  function convertToMap(deckArray) {
-    const deckMap = new Map();
-    deckArray.forEach(([id, count]) => {
-      deckMap.set(id, count);
-    });
-    return deckMap;
-  }
-
-  const mainDeckMap = convertToMap(deck.main || []);
-  const sideDeckMap = convertToMap(deck.side || []);
+  // 掲示板のデータは他のユーザーが投稿したもの。実在するカードだけを残す。
+  const mainDeckMap = new Map(sanitizeDeckEntries(deck.main));
+  const sideDeckMap = new Map(sanitizeDeckEntries(deck.side));
 
   return (
     <div
@@ -252,8 +246,9 @@ function ContainerUploadedDeck({
       <h4 className="mt-3">説明</h4>
       <p>
         {deck.description
-          ? deck.description.split('\n').map((line) => (
-            <React.Fragment key={line}>
+          ? deck.description.split('\n').map((line, i) => (
+            /* eslint-disable-next-line react/no-array-index-key */
+            <React.Fragment key={`${i}-${line}`}>
               {line}
               <br />
             </React.Fragment>
@@ -294,7 +289,7 @@ function ContainerDeckPart({ title, deckSaved }) {
         {dataCardsArrayForDeck.map((card) => (deckSaved.has(card.id) ? (
           <ImageCard
             key={card.id}
-            imageUrl={card.imageUrl}
+            imageUrl={card.thumbUrl}
             alt={card.name}
             numCopies={deckSaved.get(card.id)}
             loading="lazy"

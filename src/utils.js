@@ -13,4 +13,19 @@ export function sum(iterable) {
   return [...iterable].reduce((a, b) => a + b, 0);
 }
 
-/* eslint-disable import/prefer-default-export */
+// クリップボードへのコピー。
+// navigator.clipboard は HTTPS などの安全なコンテキストでしか使えず、
+// 権限を拒否されることもあるため、成否を呼び出し側に返す。
+export async function copyText(text) {
+  try {
+    if (!navigator.clipboard?.writeText) {
+      return false;
+    }
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* eslint-enable import/prefer-default-export */

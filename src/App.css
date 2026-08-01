@@ -432,18 +432,32 @@ h2, table, .table-responsive {
   }
 }
 
-/* 狭い画面では、レシピのカードを4列きっちりに並べる。
+/* レシピの一覧。余白は ms-2 ではなくここで見る
+   (Bootstrap の余白ユーティリティは !important で上書きしづらいため)。 */
+.container-deck-cards {
+  margin-left: .5rem;
+}
+
+/* 狭い画面ではカードを4列きっちりに並べる。
    float のままだと端末の幅次第で3列になったり隙間が空いたりする。 */
 @media (max-width: 575.98px) {
   .container-deck-cards {
     display: grid;
     gap: .25rem;
-    grid-template-columns: repeat(4, 1fr);
+    /* 1fr ではなく minmax(0, 1fr)。1fr は最小幅が中身依存なので、
+       中身が縮まないと列がはみ出す。0 を下限にすれば必ず収まる。 */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* 左右そろえて余白を取る。片側だけだと右端のカードが画面に貼り付く。 */
+    margin-left: 0;
+    padding-inline: .5rem;
+    /* はみ出しをコンテナ内スクロールで隠さない (問題に気づけなくなる) */
+    overflow: visible;
   }
 
   .container-deck-cards .container-card {
     float: none;
     margin: 0;
+    min-width: 0;
     width: 100%;
   }
 
@@ -451,10 +465,12 @@ h2, table, .table-responsive {
   .container-deck-cards .container-card .img-card {
     display: block;
     height: auto;
+    max-width: 100%;
     width: 100%;
   }
 
   .container-deck-cards .btn-card-toggle {
+    max-width: 100%;
     width: 100%;
   }
 
@@ -471,6 +487,15 @@ h2, table, .table-responsive {
   .container-deck-cards .container-num-copies {
     font-size: .8rem;
     line-height: 1.2;
+  }
+}
+
+/* 幅の広い端末 (折りたたみを開いた状態や小型タブレットなど) では、
+   4列のままだとカードが大きくなりすぎるので列を増やす。
+   下限を決めて入るだけ並べる。 */
+@media (min-width: 480px) and (max-width: 575.98px) {
+  .container-deck-cards {
+    grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
   }
 }
 

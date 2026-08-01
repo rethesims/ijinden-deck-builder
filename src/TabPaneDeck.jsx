@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   Modal,
@@ -42,6 +42,23 @@ function TabPaneDeck({
   function handleToggleActive(key) {
     setKeyActive((keyPrev) => (keyPrev === key ? null : key));
   }
+
+  // カード以外の場所をタップしたら選択を解除する。
+  // React のハンドラは #root に付くため、document のリスナーはそれより後に
+  // 走る。カードをタップして選択した直後に、同じクリックで解除されることはない。
+  useEffect(() => {
+    if (keyActive === null) {
+      return undefined;
+    }
+    function handleClickOutside(event) {
+      const { target } = event;
+      if (!(target instanceof Element) || target.closest('.container-card') === null) {
+        setKeyActive(null);
+      }
+    }
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [keyActive]);
 
   async function handleClickSave() {
     if (deckMain.size === 0 && deckSide.size === 0) {

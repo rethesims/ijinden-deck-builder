@@ -116,3 +116,39 @@ test('選択中のカードの増減ボタンが効く', async () => {
     activeCardsIn(paneDeck)[0].querySelector('.container-num-copies').textContent,
   ).toBe('1');
 }, 20000);
+
+test('カード以外の場所をタップすると選択が外れる', async () => {
+  const user = userEvent.setup();
+  const paneDeck = await setupDeck(user, ['R-1', 'R-2']);
+
+  await user.click(togglesIn(paneDeck)[0]);
+  expect(activeCardsIn(paneDeck).length).toBe(1);
+
+  // 見出しをタップする (カードの外)
+  await user.click(screen.getByText('デッキレシピ'));
+  expect(activeCardsIn(paneDeck).length).toBe(0);
+}, 20000);
+
+test('別のタブに移っても選択は残らない', async () => {
+  const user = userEvent.setup();
+  const paneDeck = await setupDeck(user, ['R-1', 'R-2']);
+
+  await user.click(togglesIn(paneDeck)[0]);
+  expect(activeCardsIn(paneDeck).length).toBe(1);
+
+  await user.click(screen.getAllByRole('tab')[0]);
+  expect(activeCardsIn(paneDeck).length).toBe(0);
+}, 20000);
+
+test('操作ボタンを押しても選択は外れない', async () => {
+  const user = userEvent.setup();
+  const paneDeck = await setupDeck(user, ['R-1']);
+
+  await user.click(togglesIn(paneDeck)[0]);
+  await user.click(activeCardsIn(paneDeck)[0].querySelector('.btn-push'));
+
+  expect(activeCardsIn(paneDeck).length).toBe(1);
+  expect(
+    activeCardsIn(paneDeck)[0].querySelector('.container-num-copies').textContent,
+  ).toBe('2');
+}, 20000);

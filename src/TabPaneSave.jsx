@@ -410,9 +410,6 @@ function TabPaneSave({
         <ModalBody>
           <Form.Group>
             <Form.Label>デッキコードを入力してください:</Form.Label>
-            <Form.Text className="d-block mb-1">
-              デッキの URL を貼り付けても読み込めます。
-            </Form.Text>
             <Form.Control
               type="text"
               value={deckCode}

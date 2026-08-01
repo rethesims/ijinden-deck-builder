@@ -287,6 +287,15 @@ h2, table, .table-responsive {
   position: relative;
 }
 
+/* 画像をタップ領域にするためのボタン。見た目は画像そのままにする。 */
+.btn-card-toggle {
+  background: none;
+  border: 0;
+  display: block;
+  line-height: 0;
+  padding: 0;
+}
+
 .container-guardian .container-card {
   background-color: gray;
 }
@@ -388,26 +397,38 @@ h2, table, .table-responsive {
   white-space: nowrap;
 }
 
-/* タッチ端末には hover がないため、レシピのカード操作ボタンを常に表示する。
-   hover 前提のままだと、スマホではカードの増減や入れ替えができない。 */
+/* タッチ端末には hover がないため、タップしたカードだけ操作ボタンを出す。
+   hover 前提のままではスマホで増減も入れ替えもできず、かといって全部に
+   出しっぱなしにするとカードが隠れて選択中のように見えてしまう。 */
 @media (hover: none) {
-  .btn-pop,
-  .btn-push,
-  .btn-move,
-  .btn-zoom {
+  .container-card.is-active .btn-pop,
+  .container-card.is-active .btn-push,
+  .container-card.is-active .btn-move,
+  .container-card.is-active .btn-zoom {
     display: initial;
   }
 
-  .container-guardian .container-card .img-card {
+  /* 選択中のカードは操作対象だと分かるように縁取る */
+  .container-card.is-active {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 1px;
+  }
+
+  .container-guardian .container-card.is-active .img-card {
     visibility: visible;
   }
 
-  /* 常時表示になるボタンが画像を覆い隠さないよう、レシピのカードを大きめにする。
+  /* ボタンが画像を覆い隠さないよう、レシピのカードを大きめにする。
      カード一覧のグリッドにはボタンを重ねないので、そちらには効かせない
      (効かせると幅が固定され、セルの中で左に寄ってしまう)。 */
   .container-card-line-up .card-medium .img-card {
     width: 100px;
     height: 140px;
+  }
+
+  /* 操作できるカードはタップできることが分かるように */
+  .btn-card-toggle {
+    cursor: pointer;
   }
 }
 

@@ -24,6 +24,9 @@ function TabPaneDeck({
   handleSetActiveDeckSaved, handleSetActiveTab, dispatchSimulator,
 }) {
   const [idZoom, setIdZoom] = useState(null);
+  // タッチ端末で操作ボタンを出しているカード。メインとサイドで同じ
+  // カードが並ぶため、どちら側かも込みで持つ。
+  const [keyActive, setKeyActive] = useState(null);
   const [showModalEmpty, setShowModalEmpty] = useState(false);
   const [messageError, setMessageError] = useState(null);
   const [deckName, setDeckName] = useState('');
@@ -34,6 +37,10 @@ function TabPaneDeck({
 
   function handleClearIdZoom() {
     setIdZoom(null);
+  }
+
+  function handleToggleActive(key) {
+    setKeyActive((keyPrev) => (keyPrev === key ? null : key));
   }
 
   async function handleClickSave() {
@@ -152,6 +159,8 @@ function TabPaneDeck({
               handleSetDeckThat={handleSetDeckSide}
               handleSetIdZoom={handleSetIdZoom}
               dispatchSimulator={dispatchSimulator}
+              keyActive={keyActive}
+              handleToggleActive={handleToggleActive}
             />
           ))
         }
@@ -171,6 +180,8 @@ function TabPaneDeck({
               handleSetDeckThat={handleSetDeckMain}
               handleSetIdZoom={handleSetIdZoom}
               dispatchSimulator={dispatchSimulator}
+              keyActive={keyActive}
+              handleToggleActive={handleToggleActive}
               isSide
             />
           ))
@@ -202,7 +213,7 @@ function TabPaneDeck({
 function ContainerDeckCard({
   id, imageUrl, name,
   deckThis, handleSetDeckThis, deckThat, handleSetDeckThat,
-  handleSetIdZoom, dispatchSimulator, isSide = false,
+  handleSetIdZoom, dispatchSimulator, keyActive, handleToggleActive, isSide = false,
 }) {
   function handleClickMinus() {
     handleClickDecrement(id, handleSetDeckThis);
@@ -230,9 +241,16 @@ function ContainerDeckCard({
 
   const numCopies = deckThis.has(id) ? deckThis.get(id) : 0;
   const moveText = isSide ? '^' : 'v';
+  const key = `${isSide ? 'side' : 'main'}-${id}`;
   return numCopies > 0
     && (
-      <ImageCard imageUrl={imageUrl} alt={name} numCopies={numCopies}>
+      <ImageCard
+        imageUrl={imageUrl}
+        alt={name}
+        numCopies={numCopies}
+        isActive={keyActive === key}
+        handleClickImage={() => handleToggleActive(key)}
+      >
         <Button variant="primary" size="sm" className="btn-pop" onClick={handleClickMinus}>-</Button>
         <Button variant="primary" size="sm" className="btn-push" onClick={handleClickPlus}>+</Button>
         <Button variant="primary" size="sm" className="btn-move" onClick={handleClickMove}>{moveText}</Button>

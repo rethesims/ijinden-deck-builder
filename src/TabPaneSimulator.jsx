@@ -186,6 +186,9 @@ function TabPaneSimulator({ deck, state, dispatch }) {
 }
 
 function ContainerSection({ title, cards, guardian = false }) {
+  // ガーディアンは伏せてあり、hover で覗く作りになっている。
+  // hover のない端末ではタップで1枚ずつ表向きにする。
+  const [keyActive, setKeyActive] = useState(null);
   const containerClass = guardian
     ? 'container-card-line-up container-guardian ms-2'
     : 'container-card-line-up ms-2';
@@ -198,7 +201,15 @@ function ContainerSection({ title, cards, guardian = false }) {
             const key = `${element}-${index}`;
             const card = dataCards.get(element);
             return (
-              <ImageCard key={key} imageUrl={card.thumbUrl} alt={card.displayName} />
+              <ImageCard
+                key={key}
+                imageUrl={card.thumbUrl}
+                alt={card.displayName}
+                isActive={guardian && keyActive === key}
+                handleClickImage={guardian
+                  ? () => setKeyActive((prev) => (prev === key ? null : key))
+                  : undefined}
+              />
             );
           })
         }

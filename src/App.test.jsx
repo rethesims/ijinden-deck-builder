@@ -121,7 +121,7 @@ test('カードペインからレシピペインへの作用', async () => {
   expect(paneDeck).toBeVisible();
   const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
   expect(imageMain).toBeVisible();
-  const numCopiesMain = imageMain.parentElement.querySelector('.container-num-copies');
+  const numCopiesMain = imageMain.closest('.container-card').querySelector('.container-num-copies');
   expect(numCopiesMain).toBeVisible();
   expect(numCopiesMain.textContent).toBe('1');
 
@@ -137,7 +137,7 @@ test('カードペインからレシピペインへの作用', async () => {
   expect(paneDeck).toBeVisible();
   const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[1];
   expect(imageSide).toBeVisible();
-  const numCopiesSide = imageMain.parentElement.querySelector('.container-num-copies');
+  const numCopiesSide = imageMain.closest('.container-card').querySelector('.container-num-copies');
   expect(numCopiesSide).toBeVisible();
   expect(numCopiesSide.textContent).toBe('1');
 
@@ -266,21 +266,21 @@ test('レシピペインからカードペインへの作用', async () => {
   expect(paneDeck).toBeVisible();
   const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
   expect(imageMain).toBeVisible();
-  const numCopiesMain = imageMain.parentElement.querySelector('.container-num-copies');
+  const numCopiesMain = imageMain.closest('.container-card').querySelector('.container-num-copies');
   expect(numCopiesMain).toBeVisible();
   expect(numCopiesMain.textContent).toBe('1');
   const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[1];
   expect(imageSide).toBeVisible();
-  const numCopiesSide = imageSide.parentElement.querySelector('.container-num-copies');
+  const numCopiesSide = imageSide.closest('.container-card').querySelector('.container-num-copies');
   expect(numCopiesSide).toBeVisible();
   expect(numCopiesSide.textContent).toBe('1');
 
-  buttonPlusMain = imageMain.parentElement.querySelector('.btn-push');
-  buttonPlusSide = imageSide.parentElement.querySelector('.btn-push');
-  const buttonMinusMain = imageMain.parentElement.querySelector('.btn-pop');
-  const buttonMinusSide = imageSide.parentElement.querySelector('.btn-pop');
-  const buttonDrop = imageMain.parentElement.querySelector('.btn-move');
-  const buttonRaise = imageSide.parentElement.querySelector('.btn-move');
+  buttonPlusMain = imageMain.closest('.container-card').querySelector('.btn-push');
+  buttonPlusSide = imageSide.closest('.container-card').querySelector('.btn-push');
+  const buttonMinusMain = imageMain.closest('.container-card').querySelector('.btn-pop');
+  const buttonMinusSide = imageSide.closest('.container-card').querySelector('.btn-pop');
+  const buttonDrop = imageMain.closest('.container-card').querySelector('.btn-move');
+  const buttonRaise = imageSide.closest('.container-card').querySelector('.btn-move');
 
   expect(buttonPlusMain.textContent).toBe('+');
   expect(buttonPlusSide.textContent).toBe('+');
@@ -431,9 +431,9 @@ test('保存したデッキを読み込んでレシピペインに表示する',
   expect(imageAlphaMain).toBeVisible();
   const imageBravoSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-2').thumbUrl}"]`)[0];
   expect(imageBravoSide).toBeVisible();
-  const numCopiesAlphaMain = imageAlphaMain.parentElement.querySelector('.container-num-copies');
+  const numCopiesAlphaMain = imageAlphaMain.closest('.container-card').querySelector('.container-num-copies');
   expect(numCopiesAlphaMain.textContent).toBe('3');
-  const numCopiesBravoSide = imageBravoSide.parentElement.querySelector('.container-num-copies');
+  const numCopiesBravoSide = imageBravoSide.closest('.container-card').querySelector('.container-num-copies');
   expect(numCopiesBravoSide.textContent).toBe('4');
 
   jest.restoreAllMocks();
@@ -662,12 +662,12 @@ test('シミュレータがレシピペインの操作でアボートする', as
   expect(paneDeck).toBeVisible();
   const imageMain = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[0];
   const imageSide = paneDeck.querySelectorAll(`img[src="${dataCardsMap.get('R-1').thumbUrl}"]`)[1];
-  buttonPlusMain = imageMain.parentElement.querySelector('.btn-push');
-  buttonPlusSide = imageSide.parentElement.querySelector('.btn-push');
-  const buttonMinusMain = imageMain.parentElement.querySelector('.btn-pop');
-  const buttonMinusSide = imageSide.parentElement.querySelector('.btn-pop');
-  const buttonDrop = imageMain.parentElement.querySelector('.btn-move');
-  const buttonRaise = imageSide.parentElement.querySelector('.btn-move');
+  buttonPlusMain = imageMain.closest('.container-card').querySelector('.btn-push');
+  buttonPlusSide = imageSide.closest('.container-card').querySelector('.btn-push');
+  const buttonMinusMain = imageMain.closest('.container-card').querySelector('.btn-pop');
+  const buttonMinusSide = imageSide.closest('.container-card').querySelector('.btn-pop');
+  const buttonDrop = imageMain.closest('.container-card').querySelector('.btn-move');
+  const buttonRaise = imageSide.closest('.container-card').querySelector('.btn-move');
   expect(buttonPlusMain.textContent).toBe('+');
   expect(buttonPlusSide.textContent).toBe('+');
   expect(buttonMinusMain.textContent).toBe('-');

@@ -300,10 +300,6 @@ h2, table, .table-responsive {
   background-color: gray;
 }
 
-.container-guardian .container-card:hover {
-  background-color: inherit;
-}
-
 .card-medium {
   margin-right: .5rem;
   margin-bottom: .5rem;
@@ -324,53 +320,47 @@ h2, table, .table-responsive {
   bottom: 0;
 }
 
-.btn-pop {
+/* カードに重ねる操作ボタン。既定は非表示で、
+   hover (マウス) かタップ (タッチ) で表示する。
+   表示時は inline-flex にする。display: initial だとインラインになり、
+   幅と高さの指定が効かず、ボタンの大きさが中身任せでバラバラになる。
+   4つとも同じ正方形にそろえ、指で押せる大きさを確保する。 */
+.btn-pop,
+.btn-push,
+.btn-move,
+.btn-zoom {
+  --bs-btn-padding-x: 0;
+  --bs-btn-padding-y: 0;
+  align-items: center;
   display: none;
+  height: 1.75rem;
+  justify-content: center;
   position: absolute;
-  left: 0;
-  top: 0;
+  width: 1.75rem;
 }
 
-.container-card:hover .btn-pop {
-  display: initial;
+.btn-pop {
+  left: 0;
+  top: 0;
 }
 
 .btn-push {
-  display: none;
-  position: absolute;
   right: 0;
   top: 0;
 }
 
-.container-card:hover .btn-push {
-  display: initial;
-}
-
 .btn-move {
-  display: none;
-  position: absolute;
   right: 0;
   bottom: 0;
 }
 
-.container-card:hover .btn-move {
-  display: initial;
-}
-
+/* カードの中央に置く */
 .btn-zoom {
-  display: none;
-  position: absolute;
   left: 0;
   right: 0;
   top: 0;
   bottom: 0;
-  width: min-content;
-  height: min-content;
   margin: auto;
-}
-
-.container-card:hover .btn-zoom {
-  display: initial;
 }
 
 .card-medium .img-card {
@@ -387,14 +377,30 @@ h2, table, .table-responsive {
   visibility: hidden;
 }
 
-.container-guardian .container-card:hover .img-card {
-  visibility: visible;
-}
-
 /* タブリンクの横幅を狭くして画面幅に収めることを試みる */
 .nav-tabs .nav-link {
   padding: var(--bs-nav-link-padding-y) calc(.5 * var(--bs-nav-link-padding-x));
   white-space: nowrap;
+}
+
+/* マウスのある端末だけ hover で操作ボタンを出す。
+   媒体で囲まないと、iOS が最後にタップした要素に hover を残すため、
+   別のカードをタップしても前のカードのボタンが出たままになる。 */
+@media (hover: hover) {
+  .container-card:hover .btn-pop,
+  .container-card:hover .btn-push,
+  .container-card:hover .btn-move,
+  .container-card:hover .btn-zoom {
+    display: inline-flex;
+  }
+
+  .container-guardian .container-card:hover {
+    background-color: inherit;
+  }
+
+  .container-guardian .container-card:hover .img-card {
+    visibility: visible;
+  }
 }
 
 /* タッチ端末には hover がないため、タップしたカードだけ操作ボタンを出す。
@@ -405,7 +411,7 @@ h2, table, .table-responsive {
   .container-card.is-active .btn-push,
   .container-card.is-active .btn-move,
   .container-card.is-active .btn-zoom {
-    display: initial;
+    display: inline-flex;
   }
 
   /* 選択中のカードは操作対象だと分かるように縁取る */
@@ -474,14 +480,12 @@ h2, table, .table-responsive {
     width: 100%;
   }
 
-  /* 4列だとカードが小さくなるので、重ねる操作ボタンも小さくする */
+  /* 4列だとカードが小さいので、文字だけ少し詰める */
   .container-deck-cards .btn-pop,
   .container-deck-cards .btn-push,
   .container-deck-cards .btn-move,
   .container-deck-cards .btn-zoom {
-    --bs-btn-padding-x: .3rem;
-    --bs-btn-padding-y: .05rem;
-    --bs-btn-font-size: .7rem;
+    --bs-btn-font-size: .85rem;
   }
 
   .container-deck-cards .container-num-copies {

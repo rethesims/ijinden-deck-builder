@@ -342,7 +342,12 @@ function ContainerCards({
 
   return (
     <div className="table-responsive">
-      <Table hover variant="light" className="table-cards">
+      {/* 効果テキストの有無でスマホの組み方を変える (App.css) */}
+      <Table
+        hover
+        variant="light"
+        className={`table-cards${showRuleText ? ' table-cards-with-text' : ''}`}
+      >
         <thead className="sticky-top">
           <tr>
             <th scope="col">ID</th>

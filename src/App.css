@@ -30,11 +30,14 @@ h2, table, .table-responsive {
   margin-right: .25rem;
 }
 
-/* タブとツールバーは画面上部に貼り付ける */
+/* タブとツールバーは画面上部に貼り付ける。
+   Bootstrap は .input-group .btn に z-index: 2 を付けるため、
+   同じ値にすると後ろにある一覧のボタンが上に重なってしまう。
+   重なり順は タブ > ツールバー > 表の見出し で固定する。 */
 .tabs-main {
   background-color: var(--bs-body-bg);
   top: 0;
-  z-index: 3;
+  z-index: 1030;
 }
 
 /* 狭い画面では見出しを小さくして一覧に画面を使う */
@@ -43,18 +46,17 @@ h2, table, .table-responsive {
     font-size: 1.1rem;
     margin-bottom: .25rem !important;
   }
-
-  .sticky-top-toolbar {
-    top: 2.5rem;
-  }
 }
 
 .sticky-top-toolbar {
   background-color: var(--bs-body-bg);
   border-bottom: 1px solid var(--bs-border-color);
+  /* タブの高さより少し小さくして、境目に隙間ができないようにする。
+     少し潜る分はツールバーの余白なので見た目に影響しない
+     (タブのほうが重なり順で上)。 */
   position: sticky;
-  top: 3rem;
-  z-index: 2;
+  top: 2.25rem;
+  z-index: 1020;
 }
 
 /* タップ領域を確保する */
@@ -124,6 +126,12 @@ h2, table, .table-responsive {
   vertical-align: middle;
 }
 
+/* 表の見出しはツールバーより下に潜らせる */
+.table-cards thead.sticky-top {
+  background-color: var(--bs-body-bg);
+  z-index: 1010;
+}
+
 /* カード名が1文字ずつ折り返されないよう最低幅を確保する */
 .table-cards .td-name {
   min-width: 8rem;
@@ -181,13 +189,21 @@ h2, table, .table-responsive {
     order: 1;
   }
 
-  /* メイン・サイドのカウンタは2つで2行目を分け合う */
+  /* メイン・サイドのカウンタは2つで2行目を分け合う。
+     効果テキストを出していないときは、これで1カード2行に収まる。 */
   .table-cards tbody td[data-label] {
     align-items: center;
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 45%;
     gap: .375rem;
+    min-width: 0;
     order: 2;
+  }
+
+  /* 効果テキストを出しているときは縦に余裕があるので、
+     1つずつ横いっぱいに広げて押しやすくする。 */
+  .table-cards-with-text tbody td[data-label] {
+    flex: 1 1 100%;
   }
 
   .table-cards tbody td[data-label]::before {
@@ -197,8 +213,7 @@ h2, table, .table-responsive {
     font-size: .8125rem;
   }
 
-  /* 余白を残さず横いっぱいに広げる。
-     - と + が左右の端に来るので、片手でも押しやすい。 */
+  /* 割り当てられた幅を余さず使う。- と + が端に来るので押しやすい。 */
   .table-cards tbody td[data-label] .input-group-counter {
     max-width: none;
     min-width: 0;

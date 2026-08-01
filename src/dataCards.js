@@ -6,11 +6,6 @@ export const dataCardsArrayForTable = [...cards].sort((a, b) => a.orderTable - b
 export const dataCardsArrayForDeck = [...cards].sort((a, b) => a.orderDeck - b.orderDeck);
 export const dataCardsMap = new Map(cards.map((element) => [element.id, element]));
 
-// デッキコードは orderTable を鍵にしているため逆引きが必要 (deckCode.js)。
-export const dataCardsMapByOrderTable = new Map(
-  cards.map((element) => [element.orderTable, element]),
-);
-
 // 1種類あたりの枚数の上限。デッキ枚数自体に上限はないが、
 // 壊れたデータで描画が固まらないよう歯止めを置く。
 const NUM_MAX_COPIES = 999;
@@ -18,7 +13,7 @@ const NUM_MAX_COPIES = 999;
 /**
  * 外部由来のデッキデータ ([カードID, 枚数] の配列) を安全な形に整える。
  *
- * サーバーや共有リンクから来たデータは信用できないため、
+ * サーバーや掲示板から来たデータは信用できないため、
  * 実在するカードと正の整数の枚数だけを残す。
  *
  * @param {*} entries 検証前のデッキデータ

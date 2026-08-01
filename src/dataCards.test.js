@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-import {
-  dataCardsArrayForTable,
-  dataCardsArrayForDeck,
-  dataCardsMap,
-  dataCardsMapByOrderTable,
-} from './dataCards';
+import { dataCardsArrayForTable, dataCardsArrayForDeck, dataCardsMap } from './dataCards';
 
-// orderTable / orderDeck は元サイトが振った値をそのまま使う。デッキコードの
-// 互換性が orderTable に依存しているため、詰め直してはいけない。欠番があるので
-// 「連番であること」ではなく「昇順かつ重複なし」を検査する。
+// orderTable / orderDeck は元サイトが振った値をそのまま使う。カードの並び順が
+// これで決まる。欠番があるので「連番であること」ではなく
+// 「昇順かつ重複なし」を検査する。
 function expectStrictlyAscending(array, key) {
   expect(Array.isArray(array)).toBe(true);
   expect(array.length).toBeGreaterThan(0);
@@ -34,13 +29,6 @@ test('dataCardsMap は Map 型', () => {
   expect(dataCardsMap instanceof Map).toBe(true);
 });
 
-test('dataCardsMapByOrderTable は orderTable から引ける', () => {
-  expect(dataCardsMapByOrderTable instanceof Map).toBe(true);
-  dataCardsArrayForTable.forEach((card) => {
-    expect(dataCardsMapByOrderTable.get(card.orderTable)).toBe(card);
-  });
-});
-
 test('各 dataCards の要素数は同じ', () => {
   const lengthTable = dataCardsArrayForTable.length;
   const lengthDeck = dataCardsArrayForDeck.length;
@@ -50,7 +38,6 @@ test('各 dataCards の要素数は同じ', () => {
   expect(typeof sizeMap).toBe('number');
   expect(sizeMap).toBe(lengthTable);
   expect(sizeMap).toBe(lengthDeck);
-  expect(dataCardsMapByOrderTable.size).toBe(lengthTable);
 });
 
 // Amplify がSPA用に自動生成するリライトの既定ルールは、この拡張子リストに

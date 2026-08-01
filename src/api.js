@@ -13,10 +13,6 @@ export const NUM_MAX_KEYWORDS = 20;
 
 // サーバーが発行するデッキコード。想定より長い・妙な文字を含むものは送らない。
 export const LENGTH_MAX_DECK_CODE = 128;
-
-// インポート欄はデッキの URL も受け付ける。
-// 全576種を1行ずつ並べても3460文字なので、それを超える余裕をみた値。
-export const LENGTH_MAX_URL = 4096;
 const REGEXP_DECK_CODE = /^[\w-]+$/;
 
 export function isValidDeckCode(code) {

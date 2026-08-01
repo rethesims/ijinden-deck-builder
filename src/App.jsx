@@ -10,39 +10,16 @@ import TabPaneDeck from './TabPaneDeck';
 import TabPaneSave from './TabPaneSave';
 import TabPaneSimulator from './TabPaneSimulator';
 import TabPaneUploadedDecks from './TabPaneUploadedDecks';
-import { PATH_SHARE, decodeDeckCode } from './deckCode';
 import enumTabPane from './enumTabPane';
 import { enumStateSimulator, reducerSimulator } from './reducerSimulator';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
-// #/deck/<コード> 付きの URL で開かれたときは、その中身を初期レシピにする。
-// 読み終えたらハッシュを消して、リロードで再度読み込まれないようにする。
-function readDeckFromHash() {
-  const { hash } = window.location;
-  if (!hash.startsWith(PATH_SHARE)) {
-    return null;
-  }
-  const decoded = decodeDeckCode(hash.substring(PATH_SHARE.length));
-  window.history.replaceState(null, '', window.location.pathname + window.location.search);
-  return decoded;
-}
-
-// StrictMode で初期化関数が2回呼ばれても結果が変わらないよう、
-// ハッシュの読み取りはモジュール評価時に一度だけ行う。
-const deckShared = readDeckFromHash();
-
 function App() {
-  const [deckMain, setDeckMain] = useState(
-    () => new Map(deckShared === null ? [] : deckShared[0]),
-  );
-  const [deckSide, setDeckSide] = useState(
-    () => new Map(deckShared === null ? [] : deckShared[1]),
-  );
-  const [activeTab, setActiveTab] = useState(
-    deckShared === null ? enumTabPane.CARD : enumTabPane.DECK,
-  );
+  const [deckMain, setDeckMain] = useState(() => new Map());
+  const [deckSide, setDeckSide] = useState(() => new Map());
+  const [activeTab, setActiveTab] = useState(enumTabPane.CARD);
   const [activeDeckSaved, setActiveDeckSaved] = useState([]);
   const [stateSimulator, dispatchSimulator] = useReducer(
     reducerSimulator,
@@ -161,13 +138,6 @@ function App() {
               デッキ掲示板には、他のユーザーが公開したデッキが表示されます。
               タブを開いたら、最新10件のデッキが表示されます。
               また、デッキアップロード時に設定されたキーワードで検索することもできます。(キーワードに合致するデッキのうち最新50件まで)
-            </Alert>
-
-            <h2>デッキの URL について</h2>
-            <Alert variant="info">
-              「#/deck/」に続く文字列がレシピの中身になっている URL は、マイデッキの「デッキコードでインポート」に
-              貼り付けるか、そのまま開くことで読み込めます。
-              URL の「#」以降にレシピが入っているため、短縮 URL などで切り落とされると復元できませんのでご注意ください。
             </Alert>
 
             <h2>特徴</h2>

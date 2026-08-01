@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-import { dataCardsArrayForTable, dataCardsArrayForDeck, dataCardsMap } from './dataCards';
+import {
+  dataCardsArrayForTable,
+  dataCardsArrayForDeck,
+  dataCardsMap,
+  sanitizeDeckEntries,
+} from './dataCards';
 
 // orderTable / orderDeck は元サイトが振った値をそのまま使う。カードの並び順が
 // これで決まる。欠番があるので「連番であること」ではなく
@@ -68,5 +73,49 @@ test('カードは必須項目をもつ', () => {
     // 自前ホストのサムネイル。内容のハッシュ付き (scripts/make-thumbnails.py)。
     // ハッシュがあるおかげで immutable キャッシュを安全に付けられる。
     expect(card.thumbUrl).toMatch(new RegExp(`^/images/${card.id}-[0-9a-f]{8}\\.jpg$`));
+  });
+});
+
+describe('sanitizeDeckEntries', () => {
+  test('正しいデータはそのまま通す', () => {
+    expect(sanitizeDeckEntries([['R-1', 3], ['R-2', 1]]))
+      .toStrictEqual([['R-1', 3], ['R-2', 1]]);
+  });
+
+  // サーバーが DynamoDB を経由すると数値が文字列で返ることがある。
+  // ここで弾いてしまうとデッキが丸ごと空になる。
+  test('枚数が文字列でも数値として受け取る', () => {
+    expect(sanitizeDeckEntries([['R-1', '3'], ['R-2', '1']]))
+      .toStrictEqual([['R-1', 3], ['R-2', 1]]);
+  });
+
+  test('存在しないカードは落とす', () => {
+    expect(sanitizeDeckEntries([['R-1', 1], ['NO-SUCH', 1]])).toStrictEqual([['R-1', 1]]);
+  });
+
+  test('重複したカードは最初のものだけ残す', () => {
+    expect(sanitizeDeckEntries([['R-1', 1], ['R-1', 2]])).toStrictEqual([['R-1', 1]]);
+  });
+
+  test.each([
+    ['0枚', [['R-1', 0]]],
+    ['負の数', [['R-1', -1]]],
+    ['小数', [['R-1', 1.5]]],
+    ['上限超え', [['R-1', 1000]]],
+    ['数値でない文字列', [['R-1', 'abc']]],
+    ['空文字', [['R-1', '']]],
+    ['空白のみ', [['R-1', '  ']]],
+    ['null', [['R-1', null]]],
+    ['真偽値', [['R-1', true]]],
+    ['要素が足りない', [['R-1']]],
+    ['配列でない要素', [{ id: 'R-1', n: 1 }]],
+  ])('壊れたデータを落とす: %s', (_label, input) => {
+    expect(sanitizeDeckEntries(input)).toStrictEqual([]);
+  });
+
+  test('配列でなければ空を返す', () => {
+    expect(sanitizeDeckEntries(null)).toStrictEqual([]);
+    expect(sanitizeDeckEntries(undefined)).toStrictEqual([]);
+    expect(sanitizeDeckEntries('R-1')).toStrictEqual([]);
   });
 });

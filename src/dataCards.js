@@ -16,6 +16,10 @@ const NUM_MAX_COPIES = 999;
  * サーバーや掲示板から来たデータは信用できないため、
  * 実在するカードと正の整数の枚数だけを残す。
  *
+ * 枚数は文字列で返ってくることがある (DynamoDB を経由すると数値が
+ * "3" のような文字列になる)。型で弾くとデッキが丸ごと空になってしまうため、
+ * 数値として解釈できるならそれを採用する。
+ *
  * @param {*} entries 検証前のデッキデータ
  * @returns {Array<[string, number]>}
  */
@@ -24,18 +28,28 @@ export function sanitizeDeckEntries(entries) {
     return [];
   }
   const seen = new Set();
-  return entries.filter((entry) => {
+  const result = [];
+  entries.forEach((entry) => {
     if (!Array.isArray(entry) || entry.length < 2) {
-      return false;
+      return;
     }
-    const [id, numCopies] = entry;
+    const [id, valueNumCopies] = entry;
     if (!dataCardsMap.has(id) || seen.has(id)) {
-      return false;
+      return;
     }
+    // 空文字や空白だけの文字列は Number() が 0 を返すため、先に弾く。
+    if (typeof valueNumCopies !== 'number' && typeof valueNumCopies !== 'string') {
+      return;
+    }
+    if (typeof valueNumCopies === 'string' && valueNumCopies.trim() === '') {
+      return;
+    }
+    const numCopies = Number(valueNumCopies);
     if (!Number.isInteger(numCopies) || numCopies < 1 || numCopies > NUM_MAX_COPIES) {
-      return false;
+      return;
     }
     seen.add(id);
-    return true;
-  }).map(([id, numCopies]) => [id, numCopies]);
+    result.push([id, numCopies]);
+  });
+  return result;
 }

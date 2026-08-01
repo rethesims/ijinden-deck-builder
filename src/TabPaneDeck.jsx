@@ -145,7 +145,7 @@ function TabPaneDeck({
         </ModalFooter>
       </Modal>
       <h3 className="m-2">{titleMain}</h3>
-      <div className="container-card-line-up ms-2">
+      <div className="container-card-line-up container-deck-cards ms-2">
         {
           dataCardsArray.map((element) => (
             <ContainerDeckCard
@@ -166,7 +166,7 @@ function TabPaneDeck({
         }
       </div>
       <h3 className="m-2">{titleSide}</h3>
-      <div className="container-card-line-up ms-2">
+      <div className="container-card-line-up container-deck-cards ms-2">
         {
           dataCardsArray.map((element) => (
             <ContainerDeckCard

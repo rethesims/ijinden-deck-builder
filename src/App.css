@@ -432,6 +432,48 @@ h2, table, .table-responsive {
   }
 }
 
+/* 狭い画面では、レシピのカードを4列きっちりに並べる。
+   float のままだと端末の幅次第で3列になったり隙間が空いたりする。 */
+@media (max-width: 575.98px) {
+  .container-deck-cards {
+    display: grid;
+    gap: .25rem;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .container-deck-cards .container-card {
+    float: none;
+    margin: 0;
+    width: 100%;
+  }
+
+  /* 画像はセル幅に合わせる。固定幅の指定より詳細度を上げて打ち消す。 */
+  .container-deck-cards .container-card .img-card {
+    display: block;
+    height: auto;
+    width: 100%;
+  }
+
+  .container-deck-cards .btn-card-toggle {
+    width: 100%;
+  }
+
+  /* 4列だとカードが小さくなるので、重ねる操作ボタンも小さくする */
+  .container-deck-cards .btn-pop,
+  .container-deck-cards .btn-push,
+  .container-deck-cards .btn-move,
+  .container-deck-cards .btn-zoom {
+    --bs-btn-padding-x: .3rem;
+    --bs-btn-padding-y: .05rem;
+    --bs-btn-font-size: .7rem;
+  }
+
+  .container-deck-cards .container-num-copies {
+    font-size: .8rem;
+    line-height: 1.2;
+  }
+}
+
 /* 画面下端に空間を作る */
 .tab-pane {
   margin-bottom: 6rem;

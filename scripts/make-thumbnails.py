@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""公式サイトのカード画像から、配信用の WebP サムネイルを作る。
+"""公式サイトのカード画像から、配信用の JPEG サムネイルを作る。
 
 公式画像は1枚あたり数百KB の PNG で Cache-Control も付かないため、
-そのまま一覧に並べると通信量が跳ね上がる。幅250px の WebP に変換して
-自前で配信すると 1/25 程度になる。
+そのまま一覧に並べると通信量が跳ね上がる。幅250px に縮めて自前で配信すると
+1/20 程度になる。
+
+形式に JPEG を使う理由:
+Amplify がSPA用に自動生成するリライトの既定ルールは、拡張子の許可リストに
+載っていないものをすべて index.html に書き換える。このリストに webp は
+入っておらず、WebP で配信すると画像の代わりに HTML が返って表示できない。
+jpg は既定で許可されているため、コンソール設定に依存せずに動く。
+(WebP の方が2〜3割小さいが、その差より確実に表示されることを優先する)
 
 ファイル名には内容のハッシュを入れる。中身が変われば URL も変わるので、
 Cache-Control: immutable を安全に付けられる (customHttp.yml)。
@@ -32,7 +39,7 @@ PATH_CARDS = os.path.join(ROOT, 'src', 'cards.json')
 DIR_OUT = os.path.join(ROOT, 'public', 'images')
 
 WIDTH = 250
-QUALITY = 80
+QUALITY = 85
 WORKERS = 8
 RETRIES = 4
 LENGTH_HASH = 8
@@ -57,11 +64,12 @@ def make_thumbnail(card):
     height = round(image.height * WIDTH / image.width)
     image = image.resize((WIDTH, height), Image.LANCZOS)
     buffer = io.BytesIO()
-    image.save(buffer, 'WEBP', quality=QUALITY, method=6)
+    image.save(buffer, 'JPEG', quality=QUALITY, optimize=True,
+               progressive=True, subsampling='4:2:0')
     data = buffer.getvalue()
 
     digest = hashlib.sha256(data).hexdigest()[:LENGTH_HASH]
-    name = f"{card['id']}-{digest}.webp"
+    name = f"{card['id']}-{digest}.jpg"
     with open(os.path.join(DIR_OUT, name), 'wb') as fh:
         fh.write(data)
     return card['id'], f'/images/{name}', len(data)
@@ -73,7 +81,7 @@ def main():
 
     os.makedirs(DIR_OUT, exist_ok=True)
     for name in os.listdir(DIR_OUT):
-        if name.endswith('.webp'):
+        if name.endswith(('.webp', '.jpg')):
             os.remove(os.path.join(DIR_OUT, name))
 
     urls = {}

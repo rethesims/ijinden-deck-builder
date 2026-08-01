@@ -63,13 +63,22 @@ python3 scripts/check-upstream-cards.py
 
 ## カード画像
 
-カード一覧・レシピの表示には、`public/images/` に置いた WebP サムネイル
-(幅250px) を使っています。公式サイトの画像は1枚あたり数百KB あり
+カード一覧・レシピの表示には、`public/images/` に置いた JPEG サムネイル
+(幅250px, 約30KB) を使っています。公式サイトの画像は1枚あたり数百KB あり
 `Cache-Control` も付かないため、直接読むとスマホでかなり重くなるためです。
 原寸の公式画像は、レシピの拡大表示のときだけ読み込みます。
 
 ファイル名には内容のハッシュが入っているので、
 `customHttp.yml` で1年間の immutable キャッシュを付けています。
+
+**形式を WebP にしないこと。**
+Amplify がSPA用に自動生成するリライトの既定ルールは、拡張子の許可リスト
+(`css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webmanifest`) に
+無いものをすべて `index.html` に書き換えます。`webp` はこのリストに無いため、
+WebP で配信すると画像の代わりに HTML が返り、カード画像が1枚も表示されません
+(`Content-Type: text/html` が返るので気づきにくい)。
+WebP の方が2〜3割小さいですが、コンソール設定に依存せず確実に表示されることを
+優先して JPEG を使っています。
 
 ## 開発
 
@@ -93,7 +102,7 @@ pip install pillow
 python3 scripts/make-thumbnails.py
 ```
 
-`scripts/make-thumbnails.py` は公式サイトから画像を取得して WebP に変換し、
+`scripts/make-thumbnails.py` は公式サイトから画像を取得して JPEG に変換し、
 `public/images/` を作り直したうえで `src/cards.json` の `thumbUrl` を書き換えます。
 
 ### デプロイ

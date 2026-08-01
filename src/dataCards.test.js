@@ -53,6 +53,25 @@ test('各 dataCards の要素数は同じ', () => {
   expect(dataCardsMapByOrderTable.size).toBe(lengthTable);
 });
 
+// Amplify がSPA用に自動生成するリライトの既定ルールは、この拡張子リストに
+// 無いものをすべて index.html に書き換える。ここに無い拡張子でサムネイルを
+// 配信すると、画像の代わりに HTML が返ってカード画像が1枚も表示されなくなる。
+// (実際に WebP で配信して起きた。Content-Type: text/html が返るので気づきにくい)
+const EXTENSIONS_SERVED_BY_AMPLIFY = [
+  'css', 'gif', 'ico', 'jpg', 'js', 'png', 'txt', 'svg',
+  'woff', 'woff2', 'ttf', 'map', 'json', 'webmanifest',
+];
+
+test('サムネイルの拡張子は Amplify がそのまま配信するものである', () => {
+  const extensions = new Set(
+    dataCardsArrayForTable.map((card) => card.thumbUrl.split('.').pop()),
+  );
+  expect(extensions.size).toBe(1);
+  extensions.forEach((extension) => {
+    expect(EXTENSIONS_SERVED_BY_AMPLIFY).toContain(extension);
+  });
+});
+
 test('カードは必須項目をもつ', () => {
   dataCardsArrayForTable.forEach((card) => {
     expect(typeof card.id).toBe('string');
@@ -61,6 +80,6 @@ test('カードは必須項目をもつ', () => {
     expect(typeof card.imageUrl).toBe('string');
     // 自前ホストのサムネイル。内容のハッシュ付き (scripts/make-thumbnails.py)。
     // ハッシュがあるおかげで immutable キャッシュを安全に付けられる。
-    expect(card.thumbUrl).toMatch(new RegExp(`^/images/${card.id}-[0-9a-f]{8}\\.webp$`));
+    expect(card.thumbUrl).toMatch(new RegExp(`^/images/${card.id}-[0-9a-f]{8}\\.jpg$`));
   });
 });

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-// カード画像は自前ホストの WebP サムネイル (public/images/<id>.webp, 幅250px) を使う。
+// カード画像は自前ホストのサムネイル (public/images/<id>-<hash>.jpg, 幅250px) を使う。
 // 公式サイトの PNG は1枚あたり数百KB あり Cache-Control も付かないため、一覧表示に
 // 使うと通信量が跳ね上がる。原寸の公式画像は拡大表示のときだけ読み込む。
 function ImageCard({

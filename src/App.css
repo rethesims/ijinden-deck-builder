@@ -142,17 +142,74 @@ h2, table, .table-responsive {
   margin-top: .25rem;
 }
 
-/* 狭い画面では表を1行1カードのブロックに組み替える。
-   横に4列並べるとカード名の欄が1文字ずつ折り返されて読めなくなるため。 */
+/* 狭い画面の組み方は効果テキストの有無で変える。
+   - なし: 表のまま1カード1行 (カウンタを詰めてカード名の幅を稼ぐ)
+   - あり: 1行目にカード名と効果テキスト、2行目に増減ボタンの2段組
+           (横に4列並べると効果テキストが1行10文字ほどしか入らず読めない) */
 @media (max-width: 575.98px) {
-  .table-cards thead {
+  .table-cards th,
+  .table-cards td {
+    padding: .375rem .1875rem;
+  }
+
+  /* カード名は残り幅をすべて使う。8rem の下限は外す */
+  .table-cards .td-name {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* ID とカウンタの列は中身の幅まで縮める (width:1% は表の縮約指定)。
+     浮いた分がカード名に回るので、折り返しが減る。 */
+  .table-cards thead th:nth-child(1),
+  .table-cards tbody td:nth-child(1),
+  .table-cards thead th:nth-child(3),
+  .table-cards thead th:nth-child(4),
+  .table-cards tbody td[data-label] {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  /* ID の列幅は全行で一番長い ID (2nd1-110 など) で決まってしまう。
+     文字を小さくして、浮いた分をカード名に回す。 */
+  .table-cards thead th:nth-child(1),
+  .table-cards tbody td:nth-child(1) {
+    font-size: .75rem;
+  }
+
+  /* 増減ボタンを詰める。これで1行に4列が収まる */
+  .table-cards .input-group-counter {
+    max-width: none;
+    min-width: 0;
+    width: 5.75rem;
+  }
+
+  .table-cards .input-group-counter .btn {
+    min-width: 0;
+    padding-left: .375rem;
+    padding-right: .375rem;
+  }
+
+  .table-cards .input-group-counter input[type="number"] {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* 見出しがあるので行ごとのラベルは出さない */
+  .table-cards td[data-label]::before {
+    content: none;
+  }
+
+  /* 見出しはツールバーと競合するので貼り付けない */
+  .table-cards thead.sticky-top {
+    position: static;
+  }
+
+  /* --- ここから効果テキストありのとき --- */
+  .table-cards-with-text thead {
     display: none;
   }
 
-  /* 1行目にカード名 (と効果テキスト)、2行目に増減ボタン、という2段組にする。
-     4列を横に並べるとカード名も効果テキストも幅が足りず、
-     1文字ずつ折り返されて読めなくなるため。 */
-  .table-cards tbody tr {
+  .table-cards-with-text tbody tr {
     align-items: flex-start;
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
@@ -161,67 +218,54 @@ h2, table, .table-responsive {
     padding: .5rem .25rem;
   }
 
-  .table-cards tbody td {
+  .table-cards-with-text tbody td {
     border: 0;
     padding: 0;
   }
 
-  /* ID (色見本を兼ねる) */
-  .table-cards tbody td:nth-child(1) {
+  .table-cards-with-text tbody td:nth-child(1) {
     border-radius: .25rem;
     flex: 0 0 auto;
     order: 0;
     padding: .125rem .375rem;
   }
 
-  /* カード名と効果テキストは1行目の残り幅をすべて使う */
-  .table-cards tbody .td-name {
+  .table-cards-with-text tbody .td-name {
     flex: 1 1 0;
     min-width: 0;
     order: 0;
+    width: auto;
   }
 
   /* カード名と増減ボタンの間で必ず改行させる */
-  .table-cards tbody tr::after {
+  .table-cards-with-text tbody tr::after {
     content: '';
     flex-basis: 100%;
     height: 0;
     order: 1;
   }
 
-  /* メイン・サイドのカウンタは2つで2行目を分け合う。
-     効果テキストを出していないときは、これで1カード2行に収まる。 */
-  .table-cards tbody td[data-label] {
+  .table-cards-with-text tbody td[data-label] {
     align-items: center;
     display: flex;
-    flex: 1 1 45%;
+    flex: 1 1 100%;
     gap: .375rem;
     min-width: 0;
     order: 2;
   }
 
-  /* 効果テキストを出しているときは縦に余裕があるので、
-     1つずつ横いっぱいに広げて押しやすくする。 */
-  .table-cards-with-text tbody td[data-label] {
-    flex: 1 1 100%;
-  }
-
-  .table-cards tbody td[data-label]::before {
+  .table-cards-with-text tbody td[data-label]::before {
     color: var(--bs-secondary-color);
     content: attr(data-label);
     flex: 0 0 auto;
     font-size: .8125rem;
   }
 
-  /* 割り当てられた幅を余さず使う。- と + が端に来るので押しやすい。 */
-  .table-cards tbody td[data-label] .input-group-counter {
-    max-width: none;
-    min-width: 0;
+  .table-cards-with-text .input-group-counter {
     width: 100%;
   }
 
-  /* 効果テキストは行を詰めすぎず、カード名から少し離す */
-  .table-cards tbody .container-rule-text {
+  .table-cards-with-text tbody .container-rule-text {
     line-height: 1.45;
     margin-top: .125rem;
   }

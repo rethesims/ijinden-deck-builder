@@ -20,10 +20,12 @@ import {
   LENGTH_MAX_DESCRIPTION,
   LENGTH_MAX_KEYWORD,
   LENGTH_MAX_NAME,
+  LENGTH_MAX_URL,
   NUM_MAX_KEYWORDS,
   URL_API_BASE,
   isValidDeckCode,
 } from './api';
+import { decodeDeckCode, extractDeckCode } from './deckCode';
 import { copyText } from './utils';
 
 import { dataCardsArrayForDeck, sanitizeDeckEntries } from './dataCards';
@@ -157,6 +159,22 @@ function TabPaneSave({
       setShowErrorModal(true);
       return;
     }
+
+    // `#/deck/<コード>` の形式なら、レシピの中身がコードそのものに入っている。
+    // サーバーに問い合わせずその場で復元する。
+    const codeInUrl = extractDeckCode(code);
+    const decoded = codeInUrl === null ? null : decodeDeckCode(codeInUrl);
+    if (decoded !== null) {
+      handleSetDeckMain(new Map(decoded[0]));
+      handleSetDeckSide(new Map(decoded[1]));
+      dispatchSimulator(enumActionSimulator.INTERRUPT);
+      setShowImportModal(false);
+      setDeckCode('');
+      handleSetActiveTab(enumTabPane.DECK);
+      return;
+    }
+
+    // ここから先はサーバーが発行したデッキコード。
     // 明らかに形式の違うものはサーバーに投げない。
     if (!isValidDeckCode(code)) {
       setErrorMessage('デッキコードの形式が正しくありません');
@@ -392,12 +410,15 @@ function TabPaneSave({
         <ModalBody>
           <Form.Group>
             <Form.Label>デッキコードを入力してください:</Form.Label>
+            <Form.Text className="d-block mb-1">
+              デッキの URL を貼り付けても読み込めます。
+            </Form.Text>
             <Form.Control
               type="text"
               value={deckCode}
               onChange={(e) => setDeckCode(e.target.value)}
               placeholder="デッキコード"
-              maxLength={LENGTH_MAX_DECK_CODE}
+              maxLength={LENGTH_MAX_URL}
             />
           </Form.Group>
         </ModalBody>

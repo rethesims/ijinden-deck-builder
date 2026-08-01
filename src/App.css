@@ -103,9 +103,13 @@ h2, table, .table-responsive {
   width: 100%;
 }
 
-/* 一覧の画像はセル幅いっぱいに伸ばす (縦横比はサムネイルのまま) */
-.container-card-grid-cell .img-card {
+/* 一覧の画像はセル幅いっぱいに伸ばして中央に置く (縦横比はサムネイルのまま)。
+   幅が固定されたままだとセルの中で左に寄ってしまうため、
+   後ろに書かれた .card-medium .img-card より詳細度を上げて打ち消す。 */
+.container-card-grid-cell .container-card .img-card {
+  display: block;
   height: auto;
+  margin-inline: auto;
   width: 100%;
 }
 
@@ -137,12 +141,15 @@ h2, table, .table-responsive {
     display: none;
   }
 
+  /* 1行目にカード名 (と効果テキスト)、2行目に増減ボタン、という2段組にする。
+     4列を横に並べるとカード名も効果テキストも幅が足りず、
+     1文字ずつ折り返されて読めなくなるため。 */
   .table-cards tbody tr {
-    align-items: center;
+    align-items: flex-start;
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
     flex-wrap: wrap;
-    gap: .25rem .5rem;
+    gap: .375rem .5rem;
     padding: .5rem .25rem;
   }
 
@@ -155,20 +162,32 @@ h2, table, .table-responsive {
   .table-cards tbody td:nth-child(1) {
     border-radius: .25rem;
     flex: 0 0 auto;
+    order: 0;
     padding: .125rem .375rem;
   }
 
+  /* カード名と効果テキストは1行目の残り幅をすべて使う */
   .table-cards tbody .td-name {
-    flex: 1 1 8rem;
+    flex: 1 1 0;
     min-width: 0;
+    order: 0;
   }
 
-  /* メイン・サイドのカウンタは2つで1行を分け合う */
+  /* カード名と増減ボタンの間で必ず改行させる */
+  .table-cards tbody tr::after {
+    content: '';
+    flex-basis: 100%;
+    height: 0;
+    order: 1;
+  }
+
+  /* メイン・サイドのカウンタは2つで2行目を分け合う */
   .table-cards tbody td[data-label] {
     align-items: center;
     display: flex;
-    flex: 1 1 9.5rem;
+    flex: 1 1 auto;
     gap: .375rem;
+    order: 2;
   }
 
   .table-cards tbody td[data-label]::before {
@@ -178,13 +197,18 @@ h2, table, .table-responsive {
     font-size: .8125rem;
   }
 
+  /* 余白を残さず横いっぱいに広げる。
+     - と + が左右の端に来るので、片手でも押しやすい。 */
   .table-cards tbody td[data-label] .input-group-counter {
+    max-width: none;
     min-width: 0;
+    width: 100%;
   }
 
-  /* 効果テキストはカード名の下に全幅で置く */
+  /* 効果テキストは行を詰めすぎず、カード名から少し離す */
   .table-cards tbody .container-rule-text {
-    flex-basis: 100%;
+    line-height: 1.45;
+    margin-top: .125rem;
   }
 }
 
@@ -313,8 +337,10 @@ h2, table, .table-responsive {
     visibility: visible;
   }
 
-  /* 常時表示になるボタンが画像を覆い隠さないよう、レシピのカードを大きめにする */
-  .card-medium .img-card {
+  /* 常時表示になるボタンが画像を覆い隠さないよう、レシピのカードを大きめにする。
+     カード一覧のグリッドにはボタンを重ねないので、そちらには効かせない
+     (効かせると幅が固定され、セルの中で左に寄ってしまう)。 */
+  .container-card-line-up .card-medium .img-card {
     width: 100px;
     height: 140px;
   }

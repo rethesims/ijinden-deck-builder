@@ -1,43 +1,40 @@
 // SPDX-License-Identifier: MIT
 
-import {
-  buildShareUrl, decodeDeckCode, encodeDeckCode, extractDeckCode,
-} from './deckCode';
+import { decodeDeckCode, encodeDeckCode, extractDeckCode } from './deckCode';
 import { dataCardsArrayForTable } from './dataCards';
 
-// 元サイトの告知記事に載っている実物の共有リンク。
-// この2件が壊れたら元サイトとの互換性が失われている。
-const CODE_UPSTREAM_V2 = 'CBABCABDABEABFABGABHABIABJABKABLABMABNAPAAA';
-const CODE_UPSTREAM_V1 = 'B8wBxXxexoRGiVikyTz6zs0AAJyozuU';
+// 実際に出回っている形の V1 コード (メイン40枚・サイド10枚)。
+// orderTable を振り直すとこのテストが壊れる。過去のコードが別のデッキを
+// 指すようになったことに気づくための番人なので、期待値は書き換えないこと。
+const CODE_V1 = 'BJiyTWl5VF2OXUncnuXxn9XlonYsYy4AAwjyD5FuHuYvY';
 
-describe('元サイトのデッキコードとの互換性', () => {
-  test('V2 (先頭 C) のコードを復号できる', () => {
-    const decoded = decodeDeckCode(CODE_UPSTREAM_V2);
+describe('デッキコードの復元', () => {
+  test('V1 (先頭 B) のコードを復号できる', () => {
+    const decoded = decodeDeckCode(CODE_V1);
     expect(decoded).not.toBeNull();
     const [main, side] = decoded;
     expect(main).toStrictEqual([
-      ['R-1', 2], ['R-2', 2], ['R-3', 2], ['R-4', 2], ['R-5', 2], ['R-6', 2], ['R-7', 2],
-      ['R-8', 2], ['R-9', 2], ['R-10', 2], ['R-11', 2], ['R-12', 2], ['R-13', 16],
+      ['2-5', 3], ['3-14', 2], ['4-33', 3], ['4-68', 2], ['4-80', 4],
+      ['2nd1-72', 2], ['2nd1-78', 3], ['2nd1-86', 3], ['2nd1-104', 2], ['2nd1-107', 3],
+      ['2nd2-7', 2], ['2nd2-47', 3], ['2nd2-49', 2], ['2nd2-54', 2], ['2nd2-60', 4],
     ]);
-    expect(side).toStrictEqual([]);
+    expect(side).toStrictEqual([
+      ['3-12', 3], ['3-14', 1], ['4-68', 1], ['2nd1-104', 1], ['2nd2-56', 2], ['2nd2-57', 2],
+    ]);
   });
 
-  test('V1 (先頭 B) のコードを復号できる', () => {
-    const decoded = decodeDeckCode(CODE_UPSTREAM_V1);
-    expect(decoded).not.toBeNull();
-    const [main, side] = decoded;
-    expect(main).toStrictEqual([
-      ['1-21', 4], ['1-26', 4], ['1-48', 4], ['1-55', 4], ['1-65', 2], ['2-2', 3],
-      ['2-17', 3], ['2-32', 4], ['2-79', 4], ['3-22', 4], ['3-72', 4],
+  test('V2 (先頭 C) のコードを復号できる', () => {
+    // 5枚以上入ると V1 では表せないため V2 になる
+    const code = encodeDeckCode([['R-1', 16], ['R-13', 2]], [['R-2', 5]]);
+    expect(code.charAt(0)).toBe('C');
+    expect(decodeDeckCode(code)).toStrictEqual([
+      [['R-1', 16], ['R-13', 2]], [['R-2', 5]],
     ]);
-    expect(side).toStrictEqual([['2-5', 4], ['3-4', 4], ['3-74', 2]]);
   });
 
   test('復号したデッキを再符号化すると元のコードに戻る', () => {
-    [CODE_UPSTREAM_V1, CODE_UPSTREAM_V2].forEach((code) => {
-      const [main, side] = decodeDeckCode(code);
-      expect(encodeDeckCode(main, side)).toBe(code);
-    });
+    const [main, side] = decodeDeckCode(CODE_V1);
+    expect(encodeDeckCode(main, side)).toBe(CODE_V1);
   });
 });
 
@@ -110,22 +107,25 @@ describe('decodeDeckCode は壊れたコードを拒否する', () => {
 });
 
 describe('extractDeckCode', () => {
-  test('元サイトの共有リンクからコードを取り出す', () => {
-    const url = `https://sweetpotato.github.io/ijinden-deck-builder/#/deck/${CODE_UPSTREAM_V1}`;
-    expect(extractDeckCode(url)).toBe(CODE_UPSTREAM_V1);
+  test('デッキの URL からコードを取り出す', () => {
+    expect(extractDeckCode(`https://bbs.d3549oz7huwdgv.amplifyapp.com/#/deck/${CODE_V1}`))
+      .toBe(CODE_V1);
   });
 
-  test('当サイトの共有リンクからコードを取り出す', () => {
-    const url = `https://bbs.d3549oz7huwdgv.amplifyapp.com/#/deck/${CODE_UPSTREAM_V2}`;
-    expect(extractDeckCode(url)).toBe(CODE_UPSTREAM_V2);
+  test('ドメインが違っても #/deck/ 以降を取り出す', () => {
+    expect(extractDeckCode(`https://example.com/foo/#/deck/${CODE_V1}`)).toBe(CODE_V1);
+  });
+
+  test('パス部分だけでも取り出す', () => {
+    expect(extractDeckCode(`#/deck/${CODE_V1}`)).toBe(CODE_V1);
   });
 
   test('コード単体はそのまま返す', () => {
-    expect(extractDeckCode(CODE_UPSTREAM_V1)).toBe(CODE_UPSTREAM_V1);
+    expect(extractDeckCode(CODE_V1)).toBe(CODE_V1);
   });
 
   test('前後の空白を無視する', () => {
-    expect(extractDeckCode(`  ${CODE_UPSTREAM_V1}\n`)).toBe(CODE_UPSTREAM_V1);
+    expect(extractDeckCode(`  ${CODE_V1}\n`)).toBe(CODE_V1);
   });
 
   test('#/deck/ を含まない URL は null', () => {
@@ -136,27 +136,5 @@ describe('extractDeckCode', () => {
     expect(extractDeckCode('')).toBeNull();
     expect(extractDeckCode('   ')).toBeNull();
     expect(extractDeckCode(null)).toBeNull();
-  });
-});
-
-describe('buildShareUrl', () => {
-  test('渡した origin で共有リンクを組み立てる', () => {
-    expect(buildShareUrl([['R-1', 1]], [], 'https://example.com/'))
-      .toBe(`https://example.com/#/deck/${encodeDeckCode([['R-1', 1]], [])}`);
-  });
-
-  test('末尾スラッシュの有無を吸収する', () => {
-    expect(buildShareUrl([['R-1', 1]], [], 'https://example.com'))
-      .toBe(buildShareUrl([['R-1', 1]], [], 'https://example.com/'));
-  });
-
-  test('表現できないデッキは null', () => {
-    expect(buildShareUrl([['R-1', 999]], [], 'https://example.com/')).toBeNull();
-  });
-
-  test('組み立てたリンクは元サイトでも読める形式', () => {
-    const url = buildShareUrl([['R-1', 2]], [['R-2', 1]], 'https://example.com/');
-    expect(url).toContain('#/deck/');
-    expect(decodeDeckCode(extractDeckCode(url))).toStrictEqual([[['R-1', 2]], [['R-2', 1]]]);
   });
 });

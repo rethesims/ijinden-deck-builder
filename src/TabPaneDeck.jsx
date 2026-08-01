@@ -3,9 +3,6 @@
 import { useState } from 'react';
 import {
   Button,
-  Form,
-  FormControl,
-  InputGroup,
   Modal,
   ModalBody,
   ModalFooter,
@@ -17,11 +14,10 @@ import ImageCard from './ImageCard';
 import { URL_API_BASE, LENGTH_MAX_NAME } from './api';
 import { dataCardsArrayForDeck as dataCardsArray, dataCardsMap } from './dataCards';
 import db from './db';
-import { buildShareUrl, decodeDeckCode, extractDeckCode } from './deckCode';
 import enumTabPane from './enumTabPane';
 import { handleClickDecrement, handleClickIncrement } from './handleClick';
 import { enumActionSimulator } from './reducerSimulator';
-import { copyText, sum } from './utils';
+import { sum } from './utils';
 
 function TabPaneDeck({
   deckMain, handleSetDeckMain, deckSide, handleSetDeckSide,
@@ -141,13 +137,6 @@ function TabPaneDeck({
           <Button variant="outline-secondary" onClick={() => setMessageError(null)}>OK</Button>
         </ModalFooter>
       </Modal>
-      <ContainerShare
-        deckMain={deckMain}
-        deckSide={deckSide}
-        handleSetDeckMain={handleSetDeckMain}
-        handleSetDeckSide={handleSetDeckSide}
-        dispatchSimulator={dispatchSimulator}
-      />
       <h3 className="m-2">{titleMain}</h3>
       <div className="container-card-line-up ms-2">
         {
@@ -207,103 +196,6 @@ function TabPaneDeck({
           )
       }
     </>
-  );
-}
-
-// 元サイト (すいーとポテト様版) と互換の共有リンク。
-// リンクの中にデッキの中身が入っているのでサーバーを介さずに共有できる。
-// デッキコードの仕様は deckCode.js を参照。
-function ContainerShare({
-  deckMain, deckSide, handleSetDeckMain, handleSetDeckSide, dispatchSimulator,
-}) {
-  const [textImport, setTextImport] = useState('');
-  const [message, setMessage] = useState(null);
-
-  const isEmpty = deckMain.size === 0 && deckSide.size === 0;
-  const urlShare = isEmpty
-    ? null
-    : buildShareUrl([...deckMain.entries()], [...deckSide.entries()]);
-
-  async function handleClickCopy() {
-    if (urlShare === null) {
-      return;
-    }
-    const copied = await copyText(urlShare);
-    setMessage(copied
-      ? { variant: 'success', text: '共有リンクをコピーしました。' }
-      : { variant: 'warning', text: 'コピーできませんでした。下の欄から手動でコピーしてください。' });
-  }
-
-  function handleClickImport() {
-    const code = extractDeckCode(textImport);
-    const decoded = code === null ? null : decodeDeckCode(code);
-    if (decoded === null) {
-      setMessage({ variant: 'danger', text: '共有リンクまたはデッキコードが正しくありません。' });
-      return;
-    }
-    const [entriesMain, entriesSide] = decoded;
-    handleSetDeckMain(new Map(entriesMain));
-    handleSetDeckSide(new Map(entriesSide));
-    dispatchSimulator(enumActionSimulator.INTERRUPT);
-    setTextImport('');
-    setMessage({ variant: 'success', text: '共有リンクからレシピを読み込みました。' });
-  }
-
-  return (
-    <section className="mx-2 mb-3">
-      <h3 className="h5">共有リンク</h3>
-      <p className="small text-body-secondary mb-2">
-        リンクの中にレシピが入っています。元サイト
-        (
-        <a href="https://sweetpotato.github.io/ijinden-deck-builder/" target="_blank" rel="noopener noreferrer">
-          すいーとポテト様版
-        </a>
-        )
-        の共有リンクとも相互に読み込めます。
-      </p>
-
-      <InputGroup className="mb-2">
-        <Button
-          variant="outline-secondary"
-          onClick={handleClickCopy}
-          disabled={urlShare === null}
-        >
-          リンクをコピー
-        </Button>
-        <FormControl
-          readOnly
-          value={urlShare ?? ''}
-          placeholder={isEmpty ? 'レシピが空です' : '共有リンクを作れないレシピです'}
-          aria-label="共有リンク"
-          onFocus={(e) => e.currentTarget.select()}
-        />
-      </InputGroup>
-
-      <InputGroup>
-        <FormControl
-          value={textImport}
-          placeholder="共有リンクを貼り付け"
-          aria-label="共有リンクを貼り付け"
-          onChange={(e) => setTextImport(e.currentTarget.value)}
-        />
-        <Button
-          variant="outline-primary"
-          onClick={handleClickImport}
-          disabled={textImport.trim() === ''}
-        >
-          読み込み
-        </Button>
-      </InputGroup>
-
-      {
-        message !== null
-          && (
-            <Form.Text className={`d-block mt-1 text-${message.variant}`} role="status">
-              {message.text}
-            </Form.Text>
-          )
-      }
-    </section>
   );
 }
 

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-// 元サイト (すいーとポテト様版) のデッキ共有リンクと互換なコーデック。
+// `#/deck/<コード>` 形式のデッキコードを読むためのコーデック。
 //
-//   https://sweetpotato.github.io/ijinden-deck-builder/#/deck/<コード>
+// レシピの中身がコードそのものに入っているため、サーバーを介さずに復元できる。
+// 当アプリはこの形式のリンクを発行しない (共有はデッキコードのインポートを使う)。
+// 読み込みだけに対応しているのは、この形式の URL を渡されたときに
+// 何もできないより復元できたほうが親切なため。
 //
-// コードはカードの `orderTable` を鍵にしているため、cards.json の orderTable が
-// 元サイトと一致していることが互換性の前提になる。cards.json を更新するときは
-// orderTable を勝手に振り直さないこと。
+// コードはカードの `orderTable` を鍵にしている。cards.json を更新するときに
+// orderTable を振り直すと、過去のコードが別のデッキを指すようになるので注意。
 //
 // コードの構造
 //   1文字目          … バージョン (V1='B', V2='C')
@@ -36,6 +38,10 @@ const VERSIONS = [
 const VERSION_OF = new Map(VERSIONS.map((spec) => [spec.version, spec]));
 
 const REGEXP_CODE = /^[-_a-zA-Z0-9]+$/;
+
+// 全576種を1種類ずつ並べても3460文字にしかならない。
+// 極端に長い入力で無駄に走査しないための歯止め。
+const LENGTH_MAX_CODE = 4096;
 
 // エントリの形式は Map#entries() と同じ [カードID, 枚数] の配列。
 function fitsIn({ bitsId, bitsNumCopies }, entries) {
@@ -78,6 +84,10 @@ function encodeWith(spec, entriesMain, entriesSide) {
 
 /**
  * デッキをデッキコードに変換する。表現できない場合は null。
+ *
+ * アプリはこの形式のリンクを発行しないため、画面からは使っていない。
+ * 復号したものを符号化し直して元に戻るか (往復) を検査するために残してある。
+ * 復号だけをテストすると、期待値そのものが間違っていても気づけない。
  *
  * @param {Array<[string, number]>} entriesMain メインデッキの [カードID, 枚数]
  * @param {Array<[string, number]>} entriesSide サイドデッキの [カードID, 枚数]
@@ -123,7 +133,9 @@ function toEntries(pairs) {
  * @returns {[Array<[string, number]>, Array<[string, number]>]|null} [メイン, サイド]
  */
 export function decodeDeckCode(code) {
-  if (typeof code !== 'string' || !REGEXP_CODE.test(code)) {
+  if (typeof code !== 'string'
+    || code.length > LENGTH_MAX_CODE
+    || !REGEXP_CODE.test(code)) {
     return null;
   }
   const spec = VERSION_OF.get(VALUE_OF.get(code.charAt(0)));
@@ -161,19 +173,12 @@ export function decodeDeckCode(code) {
   return [toEntries(pairsMain), toEntries(pairsSide)];
 }
 
-// 共有リンクの受け口。元サイトのリンクも自サイトのリンクも裸のコードも受ける。
-const PREFIXES_SHARE_URL = [
-  'https://sweetpotato.github.io/ijinden-deck-builder/#/deck/',
-  'http://sweetpotato.github.io/ijinden-deck-builder/#/deck/',
-];
-
 export const PATH_SHARE = '#/deck/';
 
 /**
- * 共有リンクまたはデッキコードから、デッキコード部分だけを取り出す。
+ * URL またはコード単体から、デッキコード部分だけを取り出す。
  *
- * 元サイトのリンク、当サイトのリンク、コード単体のいずれも受け付ける。
- * 取り出せない場合は null。
+ * ドメインは問わず `#/deck/` 以降を見る。取り出せない場合は null。
  *
  * @param {string} text ユーザーが貼り付けた文字列
  * @returns {string|null}
@@ -187,34 +192,16 @@ export function extractDeckCode(text) {
     return null;
   }
 
-  const prefixKnown = PREFIXES_SHARE_URL.find((prefix) => trimmed.startsWith(prefix));
-  if (prefixKnown !== undefined) {
-    return trimmed.substring(prefixKnown.length);
-  }
-
-  // 当サイトのリンク (ドメインが変わっても動くよう #/deck/ 以降を見る)。
-  // 任意の URL を信用しないよう、http(s) のみ受け付ける。
+  // URL の場合。任意のスキームを信用しないよう http(s) のみ受け付ける。
   if (/^https?:\/\//i.test(trimmed)) {
     const indexPath = trimmed.indexOf(PATH_SHARE);
     return indexPath < 0 ? null : trimmed.substring(indexPath + PATH_SHARE.length);
   }
 
-  return trimmed;
-}
-
-/**
- * デッキから共有リンクを組み立てる。表現できない場合は null。
- *
- * @param {Array<[string, number]>} entriesMain メインデッキの [カードID, 枚数]
- * @param {Array<[string, number]>} entriesSide サイドデッキの [カードID, 枚数]
- * @param {string} origin リンクの基底 URL (省略時は現在のページ)
- * @returns {string|null}
- */
-export function buildShareUrl(entriesMain, entriesSide, origin = undefined) {
-  const code = encodeDeckCode(entriesMain, entriesSide);
-  if (code === null) {
-    return null;
+  // `#/deck/xxx` のようにパス部分だけ貼られた場合。
+  if (trimmed.startsWith(PATH_SHARE)) {
+    return trimmed.substring(PATH_SHARE.length);
   }
-  const base = origin ?? `${window.location.origin}${window.location.pathname}`;
-  return `${base.replace(/\/*$/, '/')}${PATH_SHARE}${code}`;
+
+  return trimmed;
 }

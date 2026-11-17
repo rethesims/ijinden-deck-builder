@@ -263,6 +263,52 @@ test('保存済みデッキの表示と削除', async () => {
   expect(decksSaved.length).toBe(0);
 });
 
+test('不適切な言葉を含むデッキはアップロードしない', async () => {
+  if (!global.structuredClone) {
+    global.structuredClone = (v) => JSON.parse(JSON.stringify(v));
+  }
+  const spyFetch = jest.spyOn(global, 'fetch').mockImplementation(async () => ({
+    ok: true,
+    json: async () => ({}),
+  }));
+  const callsUpload = () => spyFetch.mock.calls.filter(([url]) => String(url).endsWith('deck/upload'));
+
+  await db.decks.clear();
+  await db.decks.add({
+    id: 1, key: 1, timestamp: new Date(), main: [['R-1', 1]], side: [], code: 'TESTDECKCODE',
+  });
+
+  render(<App />);
+  const user = userEvent.setup();
+
+  const tabSave = screen.getAllByRole('tab')[2];
+  const paneSave = screen.getAllByRole('tabpanel')[2];
+  await user.click(tabSave);
+  await waitFor(() => expect(paneSave.querySelectorAll('.accordion-item').length).toBe(1));
+
+  const buttonUpload = paneSave.querySelector('.accordion-item .container-button button:nth-child(3)');
+  expect(buttonUpload.textContent).toBe('アップロード');
+  await user.click(buttonUpload);
+
+  const inputName = await screen.findByPlaceholderText('デッキ名を入力');
+  const buttonSend = () => screen.getAllByRole('button', { name: 'アップロード' })
+    .find((button) => button.closest('.modal-footer'));
+
+  // NG ワード入りは送らずにエラーを出す
+  await user.type(inputName, 'うんこデッキ');
+  await user.click(buttonSend());
+  expect(await screen.findByText('不適切な言葉が含まれているため投稿できません')).toBeInTheDocument();
+  expect(callsUpload().length).toBe(0);
+  await user.click(screen.getByRole('button', { name: '閉じる' }));
+
+  // 名前を直せば送れる
+  await user.clear(inputName);
+  await user.type(inputName, '天草LO');
+  await user.click(buttonSend());
+  await waitFor(() => expect(callsUpload().length).toBe(1));
+  expect(JSON.parse(callsUpload()[0][1].body).name).toBe('天草LO');
+}, 10000);
+
 // 「localStorage に保存されているデータの移行」のテストはここにあったが削除した。
 // 移行処理そのものが commit bd71728 (色々機能勝手に追加した版) で本体から
 // 取り除かれており、テストだけが取り残されて必ず失敗する状態になっていた。

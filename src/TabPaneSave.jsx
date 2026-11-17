@@ -28,6 +28,7 @@ import { copyText } from './utils';
 
 import { dataCardsArrayForDeck, sanitizeDeckEntries } from './dataCards';
 import ImageCard from './ImageCard';
+import { reasonUploadRejected } from './moderation';
 import { enumActionSimulator } from './reducerSimulator';
 import enumTabPane from './enumTabPane';
 
@@ -249,6 +250,19 @@ function TabPaneSave({
       .map((kw) => kw.value.trim().slice(0, LENGTH_MAX_KEYWORD))
       .filter((kw) => kw)
       .slice(0, NUM_MAX_KEYWORDS);
+
+    // 不適切な言葉や「テスト」だけの投稿は送らない。
+    // API を直接叩かれると素通りするので、一覧側でも同じ判定で隠している。
+    const reasonRejected = reasonUploadRejected({
+      name: deckName,
+      description: deckDescription,
+      keywords: keywordsArray,
+    });
+    if (reasonRejected) {
+      setErrorMessage(reasonRejected);
+      setShowErrorModal(true);
+      return;
+    }
 
     const dataToUpload = {
       name: deckName.trim().slice(0, LENGTH_MAX_NAME),

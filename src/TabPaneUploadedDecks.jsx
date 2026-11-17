@@ -6,6 +6,7 @@ import cardsJson from './cards.json';
 import { LENGTH_MAX_SEARCH, URL_API_BASE } from './api';
 import { dataCardsArrayForDeck, sanitizeDeckEntries } from './dataCards';
 import ImageCard from './ImageCard';
+import { isDeckHidden } from './moderation';
 import { enumActionSimulator } from './reducerSimulator';
 import enumTabPane from './enumTabPane';
 
@@ -40,7 +41,8 @@ async function fetchUploadedDecks(searchURL, searchData, setUploadedDecks, setEr
     } else {
       const data = await response.json();
       const decks = data.decks && data.decks.length > 0 ? data.decks : data;
-      setUploadedDecks(decks);
+      // 不適切な投稿はサーバーに残っていても画面には出さない (moderation.js)。
+      setUploadedDecks(Array.isArray(decks) ? decks.filter((deck) => !isDeckHidden(deck)) : []);
       setErrorMessage('');
     }
   } catch (error) {
